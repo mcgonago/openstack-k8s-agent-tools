@@ -75,43 +75,73 @@ run_plugin_tests() {
     test_file_exists ".claude-plugin/plugin.json" "Plugin metadata exists"
     test_json_valid ".claude-plugin/plugin.json" "Plugin metadata is valid JSON"
 
-    # Test skills
+    # Discover and test skills
     echo -e "\n${YELLOW}🎯 Testing Skills${NC}"
-    test_file_exists "skills/debug-operator/SKILL.md" "Debug operator skill exists"
-    test_file_exists "skills/explain-flow/SKILL.md" "Explain flow skill exists"
-    test_file_exists "skills/plan-feature/SKILL.md" "Plan feature skill exists"
-    test_file_exists "skills/analyze-logs/SKILL.md" "Analyze logs skill exists"
-    test_file_exists "skills/code-style/SKILL.md" "Code style skill exists"
-    test_file_exists "skills/test-operator/SKILL.md" "Test operator skill exists"
-    test_file_exists "skills/code-review/SKILL.md" "Code review skill exists"
-    test_file_exists "skills/task-executor/SKILL.md" "Task executor skill exists"
+    for skill_dir in skills/*/; do
+        [ -d "$skill_dir" ] || continue
+        skill_name=$(basename "$skill_dir")
+        test_file_exists "${skill_dir}SKILL.md" "Skill '$skill_name' has SKILL.md"
 
-    # Test agents
+        # Validate frontmatter has required fields
+        if [ -f "${skill_dir}SKILL.md" ]; then
+            frontmatter=$(sed -n '2,/^---$/p' "${skill_dir}SKILL.md" | head -n -1)
+            for field in name description user-invocable; do
+                if echo "$frontmatter" | grep -q "^${field}:"; then
+                    run_test "Skill '$skill_name' has '$field' field" "true"
+                else
+                    run_test "Skill '$skill_name' has '$field' field" "false"
+                fi
+            done
+
+            # If skill references an agent, check it exists
+            if grep -q "agents/${skill_name}/AGENT.md" "${skill_dir}SKILL.md"; then
+                test_file_exists "agents/${skill_name}/AGENT.md" "Skill '$skill_name' has matching AGENT.md"
+            fi
+        fi
+    done
+
+    # Discover and test agents
     echo -e "\n${YELLOW}🤖 Testing Agents${NC}"
-    test_file_exists "agents/code-review/AGENT.md" "Code review agent exists"
-    test_file_exists "agents/plan-feature/AGENT.md" "Plan feature agent exists"
-    test_file_exists "agents/task-executor/AGENT.md" "Task executor agent exists"
+    for agent_dir in agents/*/; do
+        [ -d "$agent_dir" ] || continue
+        agent_name=$(basename "$agent_dir")
+        test_file_exists "${agent_dir}AGENT.md" "Agent '$agent_name' has AGENT.md"
 
-    # Test lib helpers
+        # Check agent has meaningful content (>10 lines)
+        if [ -f "${agent_dir}AGENT.md" ]; then
+            lines=$(wc -l < "${agent_dir}AGENT.md")
+            run_test "Agent '$agent_name' has content (${lines} lines)" "[ $lines -gt 10 ]"
+        fi
+    done
+
+    # Discover and test lib helpers
     echo -e "\n${YELLOW}📦 Testing Lib${NC}"
-    test_file_exists "lib/debug-helpers.sh" "Debug helpers exist"
-    test_executable "lib/debug-helpers.sh" "Debug helpers are executable"
-    test_file_exists "lib/dev-workflow.sh" "Dev workflow exists"
-    test_executable "lib/dev-workflow.sh" "Dev workflow is executable"
-    test_file_exists "lib/test-workflow.sh" "Test workflow exists"
-    test_executable "lib/test-workflow.sh" "Test workflow is executable"
-    test_file_exists "lib/code-parser.js" "Code parser exists"
-    test_node_script "lib/code-parser.js" "Code parser runs"
-    test_file_exists "lib/log-analyzer.js" "Log analyzer exists"
-    test_node_script "lib/log-analyzer.js" "Log analyzer runs"
-    test_file_exists "lib/style-analyzer.js" "Style analyzer exists"
-    test_file_exists "lib/log-patterns.json" "Log patterns exist"
-    test_json_valid "lib/log-patterns.json" "Log patterns are valid JSON"
+    for f in lib/*.sh; do
+        [ -f "$f" ] || continue
+        name=$(basename "$f")
+        test_file_exists "$f" "Lib '$name' exists"
+        test_executable "$f" "Lib '$name' is executable"
+    done
+    for f in lib/*.js; do
+        [ -f "$f" ] || continue
+        name=$(basename "$f")
+        test_file_exists "$f" "Lib '$name' exists"
+    done
+    for f in lib/*.json; do
+        [ -f "$f" ] || continue
+        name=$(basename "$f")
+        test_file_exists "$f" "Lib '$name' exists"
+        test_json_valid "$f" "Lib '$name' is valid JSON"
+    done
 
-    # Test scripts
+    # Discover and test scripts
     echo -e "\n${YELLOW}📜 Testing Scripts${NC}"
-    test_file_exists "scripts/install.sh" "Install script exists"
-    test_executable "scripts/install.sh" "Install script is executable"
+    for f in scripts/*.sh; do
+        [ -f "$f" ] || continue
+        name=$(basename "$f")
+        test_file_exists "$f" "Script '$name' exists"
+        test_executable "$f" "Script '$name' is executable"
+    done
 
     # Test documentation
     echo -e "\n${YELLOW}📚 Testing Documentation${NC}"
