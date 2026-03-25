@@ -162,6 +162,13 @@ write code --> /test-operator quick --> /test-operator focus "..." --> /code-sty
 - **[Development Guide](docs/DEVELOPMENT.md)** — extending the plugin with new skills
 - **[CLAUDE.md](CLAUDE.md)** — project conventions and skill reference
 
+## Roadmap
+
+- [ ] `install.sh` — manual installation script with platform support (Claude Code, OpenCode, others)
+- [ ] Session management for `/plan-feature` and `/task-executor`
+- [ ] Jira sub-task export from task breakdowns
+- [ ] Plan diffing (detect Jira ticket changes after plan creation)
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
