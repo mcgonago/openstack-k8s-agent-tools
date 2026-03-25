@@ -6,16 +6,11 @@ Claude Code plugin for [openstack-k8s-operators](https://github.com/openstack-k8
 
 ### Claude Code (recommended)
 
-From the marketplace (inside Claude Code):
-
-```bash
-/plugin install openstack-k8s-agent-tools
-```
-
-Or add directly from the repository URL:
+Add the marketplace and install the plugin (two steps):
 
 ```bash
 claude plugin marketplace add https://github.com/fmount/openstack-k8s-agent-tools
+claude plugin install openstack-k8s-agent-tools
 ```
 
 Or clone and install manually:
