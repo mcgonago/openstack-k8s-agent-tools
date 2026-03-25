@@ -15,15 +15,145 @@ Plan features and bug fixes for openstack-k8s-operators operators with Jira inte
 /plan-feature
 ```
 
-## What It Does
+## How It Works
 
-1. **Reads the input** — fetches a Jira ticket via Atlassian MCP, or reads a local markdown spec file
-2. **Analyzes the codebase** — reads your operator's controllers, API types, webhooks, and tests
-3. **Cross-references** — checks lib-common for existing helpers, peer operators for prior art, dev-docs for conventions
-4. **Runs a planning checklist** — assesses 11 principles (API changes, lib-common reuse, webhooks, conditions, EnvTest, kuttl, RBAC, code style, etc.)
-5. **Proposes 2-3 strategies** — with trade-offs, risks, and a recommendation
-6. **Produces a task breakdown** — grouped by functional area (API, controller, testing, docs)
-7. **Writes a plan file** — to `docs/plans/YYYY-MM-DD-<ticket>-plan.md` for `/task-executor` to execute
+```
+ Jira ticket (OSPRH-2345)        Spec file (.md)        Interactive
+      |                               |                      |
+      +--- Atlassian MCP              +--- Read tool          +--- ask user
+      |                               |                      |
+      +-------------------------------+----------------------+
+                                      |
+                              /plan-feature
+                              [agent: plan-feature]
+                                      |
+              +-----------+-----------+-----------+
+              |           |           |           |
+           Context    Cross-repo   Planning   Strategies
+           Summary    Analysis     Checklist  (2-3 options)
+              |           |           |           |
+              |    +------+------+    |     user picks
+              |    |      |      |    |        one
+              |  lib-   peer   dev-   |           |
+              | common  ops   docs    |           |
+              +---+------+------+----+-----------+
+                                      |
+                          docs/plans/<plan>.md
+                                      |
+                              /task-executor
+                              [agent: task-executor]
+                                      |
+              +-----------+-----------+-----------+
+              |           |           |           |
+           Group 1     Group 2     Group 3      ...
+          API changes  Controller  Testing
+              |           |           |
+              +----each task----------+
+              |  write -> test -> checkpoint
+              |  pause at group boundaries
+              |
+              +---> /test-operator full
+              +---> /code-review [agent: code-review]
+              +---> submit PR
+```
+
+### Planning Phase (detail)
+
+```
++---------------------------------------------------------------+
+|                     /plan-feature                              |
+|                     [agent: plan-feature]                      |
++---------------------------------------------------------------+
+|                                                                |
+|  1. INPUT NORMALIZATION                                        |
+|     Jira (MCP) or spec file --> Context Summary                |
+|                                                                |
+|  2. CROSS-REPO ANALYSIS                                        |
+|     +------------------+------------------+-----------------+  |
+|     | Current operator | lib-common       | Peer operators  |  |
+|     | controllers/     | modules/common/* | nova, cinder,   |  |
+|     | api/             | (local or gh)    | manila, ...     |  |
+|     | config/          |                  | (local or gh)   |  |
+|     | test/            | dev-docs         |                 |  |
+|     +------------------+ conventions      +-----------------+  |
+|                        +------------------+                    |
+|                                                                |
+|  3. PLANNING CHECKLIST (11 principles)                         |
+|     +-------------+---------------+---------------------------+|
+|     | Principle    | Assessment    | Notes                     ||
+|     |-------------|---------------|---------------------------||
+|     | API Changes | Yes/No/N/A    | struct changes, markers   ||
+|     | lib-common  | Yes/No/N/A    | existing helpers, new?    ||
+|     | Duplication | Yes/No/N/A    | peer operator patterns    ||
+|     | Code Style  | Yes/No/N/A    | gopls, imports, wrapping  ||
+|     | Webhooks    | Yes/No/N/A    | Spec.Default(), paths     ||
+|     | Conditions  | Yes/No/N/A    | severity, generation      ||
+|     | EnvTest     | Yes/No/N/A    | new reconcile paths       ||
+|     | Kuttl       | Yes/No/N/A    | integration scenarios     ||
+|     | RBAC        | Yes/No/N/A    | markers, verbs            ||
+|     | Evidence    | Yes/No/N/A    | logs, repro (bugs only)   ||
+|     | Docs        | Yes/No/N/A    | dev-docs, inline          ||
+|     +-------------+---------------+---------------------------+|
+|                                                                |
+|  4. STRATEGIES (2-3 options)                                   |
+|     Strategy A: <approach> -- pros/cons/risk                   |
+|     Strategy B: <approach> -- pros/cons/risk                   |
+|     Recommendation: Strategy A because <reasoning>             |
+|     --> user approves                                          |
+|                                                                |
+|  5. TASK BREAKDOWN (grouped by functional area)                |
+|     Group 1: API  --> Task 1.1, 1.2, 1.3                      |
+|     Group 2: Ctrl --> Task 2.1, 2.2                            |
+|     Group 3: Test --> Task 3.1, 3.2                            |
+|     --> writes docs/plans/<plan>.md                            |
+|                                                                |
++---------------------------------------------------------------+
+```
+
+### Execution Phase (detail)
+
+```
++---------------------------------------------------------------+
+|                     /task-executor                              |
+|                     [agent: task-executor]                      |
++---------------------------------------------------------------+
+|                                                                |
+|  LOAD          READ docs/plans/<plan>.md                       |
+|  VALIDATE      check 5 sections present                        |
+|  DETECT        find first uncompleted task                     |
+|  REPORT        "3/8 tasks done. Next: Task 2.1"               |
+|                                                                |
+|  EXECUTE LOOP:                                                 |
+|                                                                |
+|    +---> pick next [ ] task                                    |
+|    |          |                                                |
+|    |     check dependencies met?                               |
+|    |     no --> stop, report                                   |
+|    |     yes                                                   |
+|    |          |                                                |
+|    |     test-first? (new reconcile path)                      |
+|    |     yes --> write test, verify fail, implement, verify pass|
+|    |     no  --> implement directly                            |
+|    |          |                                                |
+|    |     checkpoint: [ ] --> [x] in plan file                  |
+|    |          |                                                |
+|    |     last task in group?                                   |
+|    |     yes --> run make fmt/vet                              |
+|    |            "Group N complete. Review?"                    |
+|    |             wait for user approval                        |
+|    |     no                                                    |
+|    +----<-+                                                    |
+|                                                                |
+|  ON ERROR:                                                     |
+|    task failure   --> stop, report, keep [ ], ask user         |
+|    codebase drift --> detect, ask adapt or regenerate          |
+|    corrupt plan   --> report, ask fix or /plan-feature again   |
+|                                                                |
+|  ON QUIT:                                                      |
+|    plan file has current progress --> /task-executor to resume  |
+|                                                                |
++---------------------------------------------------------------+
+```
 
 ## Prerequisites
 

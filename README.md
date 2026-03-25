@@ -119,170 +119,56 @@ kubectl logs deployment/nova-operator -n openstack > nova.log
 ### Feature Development
 
 ```
- Jira ticket                  Spec file (.md)
-      |                            |
-      +----------+   +-------------+
-                 |   |
-            /plan-feature
-            [agent: plan-feature]
-                 |
-     +-----------+-----------+-----------+
-     |           |           |           |
-  Context    Cross-repo   Planning   Strategies
-  Summary    Analysis     Checklist  (2-3 options)
-     |           |           |           |
-     |    +------+------+    |     user picks
-     |    |      |      |    |        one
-     |  lib-   peer   dev-   |           |
-     | common  ops   docs    |           |
-     +---+------+------+----+-----------+
-                 |
-          docs/plans/<plan>.md
-                 |
-            /task-executor
-            [agent: task-executor]
-                 |
-     +-----------+-----------+
-     |           |           |
-   Group 1    Group 2    Group 3
-  API changes Controller  Testing
-     |           |           |
-     +---each task-----------+
-     |   write -> test -> checkpoint
-     |   pause at group boundaries
-     |
-     +---> /test-operator full
-     +---> /code-review [agent: code-review]
-     +---> submit PR
+/plan-feature OSPRH-2345 --> /task-executor --> /test-operator full --> /code-review --> PR
 ```
+
+See [docs/plan-feature.md](docs/plan-feature.md) for detailed flow diagrams.
 
 ### Bug Fix
 
 ```
-  logs / error report
-         |
-    /analyze-logs ---------> pattern report
-         |                   (25+ patterns)
-    /debug-operator -------> diagnosis
-         |                   (pods, events,
-         |                    RBAC, conditions)
-    /plan-feature OSPRH-XXX
-    [agent: plan-feature]
-         |
-     +---+---+
-     |       |
-  root    regression
-  cause   test plan
-  hypothesis  |
-     |        |
-     +---+----+
-         |
-    docs/plans/<plan>.md
-         |
-    /task-executor --------> fix + tests
-    [agent: task-executor]
-         |
-    /test-operator full ---> validate
-         |
-    /code-review ----------> review
-    [agent: code-review]
-         |
-      submit PR
+/analyze-logs --> /debug-operator --> /plan-feature OSPRH-XXX --> /task-executor --> /test-operator full --> PR
 ```
 
 ### Daily Development
 
 ```
-                    +------------------+
-                    |   write code     |<----------+
-                    +--------+---------+           |
-                             |                     |
-                    /test-operator quick            |
-                       fmt + vet + tidy             |
-                             |                     |
-                       pass? |                     |
-                     +---yes-+--no--+              |
-                     |              |              |
-            /test-operator     fix issues ---------+
-            focus "pattern"
-                     |
-                pass? |
-              +--yes--+--no--+
-              |              |
-         /code-style    fix + iterate ----+
-              |                           |
-         /test-operator standard          |
-           lint + full tests              |
-              |                           |
-         /code-review                     |
-         [agent: code-review]             |
-              |                           |
-         verdict?                         |
-      +--approve--+--changes--+-----------+
-      |
-   submit PR
+write code --> /test-operator quick --> /test-operator focus "..." --> /code-style --> /code-review --> PR
 ```
 
 ### Skill Interaction Map
 
 ```
 +-------------------------------------------------------------------+
-|                        SKILLS & AGENTS                            |
-+-------------------------------------------------------------------+
 |                                                                   |
 |  PLANNING & EXECUTION          QUALITY & REVIEW                   |
-|  ~~~~~~~~~~~~~~~~~~~~          ~~~~~~~~~~~~~~~~                   |
 |                                                                   |
 |  /plan-feature -----+         /test-operator                      |
 |  [plan-feature]     |           quick | standard | full           |
-|       |              |              |                              |
-|       v              |         /code-style                        |
-|  docs/plans/         |           gopls modernize                  |
-|       |              |              |                              |
-|       v              |         /code-review                       |
-|  /task-executor      |         [code-review]                      |
-|  [task-executor]     |           10 review criteria               |
-|       |              |                                            |
-|       +--------------+----> uses during execution                 |
+|       |             |                |                            |
+|       v             |         /code-style                         |
+|  docs/plans/        |           gopls modernize                   |
+|       |             |                |                            |
+|       v             |         /code-review                        |
+|  /task-executor     |         [code-review]                       |
+|  [task-executor] ---+----> uses during execution                  |
 |                                                                   |
 |  DEBUGGING & ANALYSIS          CODE UNDERSTANDING                 |
-|  ~~~~~~~~~~~~~~~~~~~~          ~~~~~~~~~~~~~~~~~~                 |
 |                                                                   |
 |  /debug-operator               /explain-flow                      |
 |    dev workflow                  reconciler logic                  |
 |    runtime debug                 state transitions                |
-|       |                          decision trees                   |
-|       v                                                           |
+|       |                                                           |
 |  /analyze-logs                                                    |
-|    25+ patterns                                                   |
-|    performance                                                    |
-|    OpenStack-specific                                             |
+|    25+ error patterns                                             |
 |                                                                   |
 +-------------------------------------------------------------------+
-|                        AGENTS                                     |
+|  AGENTS              | EXTERNAL INTEGRATIONS                      |
+|  plan-feature        | [Atlassian MCP] --> /plan-feature (Jira)   |
+|  task-executor       | [GitHub CLI]    --> /plan-feature (repos)   |
+|  code-review         | [lib-common]    --> plan + execute (reuse)  |
+|                      | [dev-docs]      --> plan + review (conventions)
 +-------------------------------------------------------------------+
-|                                                                   |
-|  plan-feature     task-executor     code-review                   |
-|  agents/          agents/           agents/                       |
-|  plan-feature/    task-executor/    code-review/                  |
-|  AGENT.md         AGENT.md          AGENT.md                     |
-|                                                                   |
-|  - input norm     - sequential      - reconciliation              |
-|  - cross-repo       execution       - conditions                  |
-|    analysis       - code quality     - webhooks                   |
-|  - 11-principle     standards       - API design                  |
-|    checklist      - test-first      - RBAC                        |
-|  - strategies     - checkpoint      - testing                     |
-|  - task breakdown - group review    - code style                  |
-|                                                                   |
-+-------------------------------------------------------------------+
-
-  External integrations:
-  ~~~~~~~~~~~~~~~~~~~~~~
-  [Atlassian MCP] ---> /plan-feature (Jira tickets)
-  [GitHub CLI]    ---> /plan-feature (cross-repo fallback)
-  [lib-common]    ---> /plan-feature, /task-executor (pattern reuse)
-  [dev-docs]      ---> /plan-feature, /code-review (conventions)
 ```
 
 ## Documentation
