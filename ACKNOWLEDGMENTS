@@ -1,0 +1,14 @@
+This project was inspired by and builds upon ideas from the following projects:
+
+- groundwork (https://github.com/etr/groundwork/)
+  AI-native development toolkit with skill-based architecture.
+
+- superpowers (https://github.com/obra/superpowers/)
+  Claude Code skill framework for structured development workflows
+  including brainstorming, planning, and execution patterns.
+
+- claude-plugins-official (https://github.com/anthropics/claude-plugins-official/)
+  Official Claude Code plugin examples and skill definitions from Anthropic.
+
+We are grateful to the authors and contributors of these projects for
+their work and for making it available to the community.
