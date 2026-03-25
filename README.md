@@ -13,25 +13,7 @@ claude plugin marketplace add https://github.com/fmount/openstack-k8s-agent-tool
 claude plugin install openstack-k8s-agent-tools
 ```
 
-Or clone and install manually:
-
-```bash
-git clone https://github.com/fmount/openstack-k8s-agent-tools.git
-cd openstack-k8s-agent-tools
-./scripts/install.sh --claude-code
-```
-
-### OpenCode
-
-```bash
-./scripts/install.sh --opencode
-```
-
-### Check dependencies
-
-```bash
-./scripts/install.sh --check
-```
+<!-- TODO: add manual install and OpenCode support when install.sh is ready -->
 
 ## Dependencies
 
