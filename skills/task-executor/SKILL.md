@@ -37,7 +37,11 @@ After loading the agent definition, determine the plan to execute:
    c. Verify the task (tests pass, build succeeds)
    d. Update the plan file (mark task done)
    e. At group boundaries: pause and ask user to review
-7. On completion: report final status and suggest next steps
+7. On completion — post-implementation:
+   a. Draft commit message (with Jira link if applicable) and present for approval
+   b. Commit with `-s -S` only after user approves — NEVER push
+   c. Update the plan file with an Outcome section
+   d. If Jira-sourced: ask if a summary comment should be posted to the ticket
 
 ## Quick Reference
 
@@ -49,3 +53,5 @@ The executor follows these principles:
 - **Group boundaries**: pause for user review between functional groups
 - **No guessing**: stop and ask on ambiguity
 - **Code quality**: gopls modernize, lib-common first, structured logging, error wrapping
+- **Commit**: human-approved message, signed (`-s -S`), with Jira link — never push
+- **Outcome**: update plan file and optionally comment on Jira ticket

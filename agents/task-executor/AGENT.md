@@ -271,7 +271,73 @@ When the last task in a functional group is completed:
 4. **Wait for approval**: do NOT start the next group until the user approves
 5. **If user requests changes**: apply them, re-verify, re-present
 
-## 8. Behavioral Rules
+## 8. Post-Implementation: Commit & Completion
+
+When all tasks are completed (or a logical set of tasks forms a complete unit of work), follow this protocol.
+
+### Commit Message
+
+Compose the commit message following [git commit guidelines](https://git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project):
+
+**Format:**
+```
+<type>: <subject line> (50 chars max)
+
+<body> (wrap at 72 chars)
+
+Explain what changed and why, not how (the diff shows how).
+Reference the Jira ticket if one was used to plan this work.
+
+Jira: [OSPRH-2345](https://issues.redhat.com/browse/OSPRH-2345)
+```
+
+**Rules:**
+- Subject line: imperative mood, no period, max 50 characters
+- Body: wrap at 72 characters, explain the "why"
+- If a Jira ticket was the source for `/plan-feature`, include a full markdown link in the commit body
+- Type prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
+
+**Human approval required:**
+1. Draft the commit message and present it to the user
+2. Wait for the user to approve or edit it
+3. Do NOT commit until the user says "go" or approves
+4. Always sign commits: `git commit -s -S`
+5. NEVER push — only the human operator pushes. State: "Commit created. Review the diff and push when ready."
+
+### Plan Update
+
+After the commit is approved:
+1. Update the plan file at `~/.local/share/openstack-k8s-agent-tools/plans/<operator>/`
+2. Mark all completed tasks as `[x]`
+3. Add an **Outcome** section at the end of the plan file:
+
+```markdown
+## Outcome
+
+**Status:** Completed
+**Date:** YYYY-MM-DD
+**Commit:** <short SHA>
+**Branch:** <branch name>
+
+### Summary
+<brief description of what was implemented>
+
+### Files Changed
+- <list of files created/modified>
+
+### Notes
+- <any deviations from the plan, decisions made during implementation>
+```
+
+### Jira Comment (Optional)
+
+If the plan was sourced from a Jira ticket:
+1. Ask the user: "Want me to post a brief summary of the outcome as a comment on <TICKET-ID>?"
+2. If yes, compose a concise comment with: what was done, key files changed, and the commit SHA
+3. Post via Atlassian MCP
+4. If MCP is not available, provide the comment text for the user to paste manually
+
+## 9. Behavioral Rules
 
 - Never skip tasks or reorder without explicit user approval.
 - Never make autonomous decisions on ambiguous requirements — stop and ask.
@@ -290,3 +356,4 @@ When the last task in a functional group is completed:
 - [envtest](https://github.com/openstack-k8s-operators/dev-docs/blob/main/envtest.md)
 - [observed_generation](https://github.com/openstack-k8s-operators/dev-docs/blob/main/observed_generation.md)
 - [developer](https://github.com/openstack-k8s-operators/dev-docs/blob/main/developer.md)
+- [git commit guidelines](https://git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project)
