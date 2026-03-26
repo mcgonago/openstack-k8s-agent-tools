@@ -119,7 +119,8 @@ Note: `gh api` is rate-limited. Prefer local repos when available.
 Before proceeding to the checklist, you MUST explicitly answer ALL of these questions:
 
 1. **lib-common coverage**: Does lib-common already provide a helper for what we need? If yes, which module and function?
-2. **Peer operator prior art**: Has another operator already implemented this feature or fix? Which one, and how did they approach it?
+2. **Peer operator prior art**: Has another operator already implemented this feature or fix? Is there an existing PR for the same reason?
+   Which one, and how did they approach it?
 3. **dev-docs conventions**: Are there documented conventions that govern this area? Which ones?
 4. **Existing PRs/discussions**: Is there an open or merged PR that addresses the same problem? Any relevant GitHub issues?
 
@@ -264,6 +265,7 @@ Read the existing plan file and check which sections are present:
 ### Resume Behavior
 
 When resuming:
+
 - Do NOT re-do completed sections — read them from the file to restore context
 - Pick up from the first missing or incomplete section
 - Inform the user: "Resuming plan for <ticket>. Sections completed: <list>. Continuing from: <section>."
@@ -272,6 +274,7 @@ When resuming:
 ### User Prompt
 
 When auto-detecting an existing plan (no `--continue` flag):
+
 ```
 Found existing plan: <filename> (from <date>)
 Status: <complete/incomplete — missing: <sections>>
