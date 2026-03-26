@@ -6,19 +6,11 @@ allowed-tools: ["Bash", "Read", "Write", "Grep", "Glob", "WebFetch", "Agent", "T
 context: fork
 ---
 
-You are the openstack-k8s-operators feature planning agent.
-
-## IMPORTANT: First Step
-
-Before doing anything else, you MUST read the agent definition file to load the full planning methodology:
-
-1. Use the Read tool to read `agents/feature/AGENT.md` from the project root
-2. If not found there, try `../agents/feature/AGENT.md` or search with Glob for `**/agents/feature/AGENT.md`
-3. You MUST have read and internalized the AGENT.md content before proceeding with any planning
+You are the openstack-k8s-operators feature planning skill. You orchestrate the planning process and dispatch the `feature` agent for the heavy lifting.
 
 ## Input Routing
 
-After loading the agent definition, determine the input source:
+Determine the input source:
 
 1. **Jira ticket**: If the argument matches a Jira ticket pattern (e.g., `OSPRH-2345`, `RHOSZ-1234` — uppercase letters, dash, digits), fetch the ticket via Atlassian MCP.
    - If MCP is not available or the call fails, inform the user: "Atlassian MCP is not configured or the ticket could not be fetched. Please provide a spec file path or paste the ticket content."
@@ -40,20 +32,25 @@ After determining the input source but BEFORE starting the planning process, che
 
 ## Workflow
 
-1. **Read `agents/feature/AGENT.md`** — this is mandatory, do not skip
-2. Determine input source (Jira ticket, spec file, or interactive)
-3. **Check for existing plan** — resume or start fresh (see Resume Detection above)
-4. Fetch and normalize the input into a Context Summary
-5. Analyze the current operator codebase (controllers, API types, webhooks, tests)
-6. Perform cross-repo analysis (lib-common, peer operators, dev-docs) — check local paths first, fall back to GitHub
-7. Run the planning checklist — assess every principle
-8. Propose 2-3 implementation strategies with trade-offs and a recommendation
-9. Wait for user to approve a strategy
-10. Produce the task breakdown grouped by functional area
-11. Write the plan to `~/.local/share/openstack-k8s-agent-tools/plans/<operator>/YYYY-MM-DD-<ticket-or-slug>-plan.md`
-12. Create internal tasks via TaskCreate for tracking
+1. Determine input source (Jira ticket, spec file, or interactive)
+2. **Check for existing plan** — resume or start fresh (see Resume Detection above)
+3. **Dispatch the feature agent** to perform the planning:
 
-When resuming, skip steps 4-7 if the plan already has those sections, and pick up from the first missing section.
+```
+Agent(
+  subagent_type="openstack-k8s-agent-tools:feature:feature",
+  description="Plan <ticket-or-slug>",
+  prompt="<Context Summary + operator name + resume state if applicable>"
+)
+```
+
+The agent handles: input normalization, cross-repo analysis, planning checklist, strategy proposals, task breakdown, and plan file writing.
+
+4. Present the agent's output to the user
+5. Wait for user to approve a strategy (if not already approved during resume)
+6. Create internal tasks via TaskCreate for tracking
+
+When resuming, pass the existing plan content to the agent so it can skip completed sections.
 
 ## Prerequisites
 

@@ -6,19 +6,11 @@ allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Agent", "TaskC
 context: fork
 ---
 
-You are the openstack-k8s-operators task executor agent.
-
-## IMPORTANT: First Step
-
-Before doing anything else, you MUST read the agent definition file to load the full execution guidelines:
-
-1. Use the Read tool to read `agents/task-executor/AGENT.md` from the project root
-2. If not found there, try `../agents/task-executor/AGENT.md` or search with Glob for `**/agents/task-executor/AGENT.md`
-3. You MUST have read and internalized the AGENT.md content before proceeding with any execution
+You are the openstack-k8s-operators task executor skill. You load the plan file and dispatch the `task-executor` agent to execute tasks.
 
 ## Plan Loading
 
-After loading the agent definition, determine the plan to execute:
+Determine the plan to execute:
 
 1. **Explicit path**: If a file path is provided, load that plan file directly.
 2. **Plan discovery**: If no argument is provided, derive the operator name from the current working directory basename and scan `~/.local/share/openstack-k8s-agent-tools/plans/<operator-name>/` for plan files. If multiple exist, present them sorted by date (most recent first) and ask the user to choose.
@@ -26,12 +18,23 @@ After loading the agent definition, determine the plan to execute:
 
 ## Workflow
 
-1. **Read `agents/task-executor/AGENT.md`** — this is mandatory, do not skip
-2. Load the plan file (explicit path or discovery)
-3. Validate the plan structure (all 5 sections present)
-4. Detect current progress (find first uncompleted task)
-5. Show progress summary to the user
-6. Execute tasks sequentially:
+1. Load the plan file (explicit path or discovery)
+2. Validate the plan structure (all 5 sections present)
+3. Detect current progress (find first uncompleted task)
+4. Show progress summary to the user
+5. **Dispatch the task-executor agent** to execute:
+
+```
+Agent(
+  subagent_type="openstack-k8s-agent-tools:task-executor:task-executor",
+  description="Execute <plan-name>",
+  prompt="<plan file content + current progress + operator context>"
+)
+```
+
+The agent handles: sequential execution, test-first, checkpointing, group boundaries, and error handling.
+
+6. Execute tasks sequentially (within the agent):
    a. Verify dependencies are completed
    b. Execute the task (write code, run commands)
    c. Verify the task (tests pass, build succeeds)
