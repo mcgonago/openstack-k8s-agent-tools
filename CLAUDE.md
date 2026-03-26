@@ -19,7 +19,7 @@ openstack-k8s-agent-tools/
 ├── skills/                  # Skill definitions (SKILL.md only)
 │   ├── debug-operator/      # Operator debugging workflows
 │   ├── explain-flow/        # Code flow analysis
-│   ├── plan-feature/        # Feature planning
+│   ├── feature/             # Feature planning
 │   ├── analyze-logs/        # Log analysis patterns
 │   ├── code-style/          # Go code style enforcement
 │   ├── test-operator/       # Testing and quality assurance
@@ -27,7 +27,7 @@ openstack-k8s-agent-tools/
 │   └── task-executor/       # Plan execution with checkpointing
 ├── agents/                  # Agent definitions
 │   ├── code-review/         # openstack-k8s-operators code reviewer
-│   ├── plan-feature/        # Feature planning methodology
+│   ├── feature/             # Feature planning methodology
 │   └── task-executor/       # Plan execution guidelines
 ├── lib/                     # Shared helper scripts and tools
 │   ├── dev-workflow.sh      # Development workflow automation
@@ -61,7 +61,7 @@ Code flow analysis for operators:
 - State transition diagrams
 - Error handling paths
 
-### `/plan-feature`
+### `/feature`
 
 Feature and bug fix planning with Jira integration:
 
@@ -127,7 +127,7 @@ Execute implementation plans task-by-task:
 
 ### Atlassian MCP (Optional)
 
-The `/plan-feature` skill integrates with Atlassian MCP for Jira ticket reading. When configured, you can invoke `/plan-feature OSPRH-2345` to fetch and plan from a Jira ticket directly. Without it, the skill works with local spec files or pasted content.
+The `/feature` skill integrates with Atlassian MCP for Jira ticket reading. When configured, you can invoke `/feature OSPRH-2345` to fetch and plan from a Jira ticket directly. Without it, the skill works with local spec files or pasted content.
 
 Configure the Atlassian MCP server in your Claude Code settings to enable this integration.
 
@@ -140,7 +140,7 @@ Configure the Atlassian MCP server in your Claude Code settings to enable this i
 3. **Follow development workflow** with make targets and testing
 4. **Analyze logs methodically** with `/analyze-logs` for patterns
 5. **Document code flow** when explaining complex controller logic
-6. **Plan features carefully** using `/plan-feature` for new implementations
+6. **Plan features carefully** using `/feature` for new implementations
 7. **Enforce code style** using `/code-style` for consistency and best practices
 
 ### Testing Commands

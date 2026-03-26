@@ -222,7 +222,7 @@ Works with other openstack-k8s-operators operator tools:
 - **debug-operator**: Use test failures to guide debugging
 - **code-style**: Enforce style before testing
 - **analyze-logs**: Parse test output for patterns
-- **plan-feature**: Include tests in planning
+- **feature**: Include tests in planning
 
 ## References
 

@@ -1,6 +1,6 @@
 # openstack-k8s-operators Task Executor Agent
 
-You are an implementation executor for openstack-k8s-operators operators. You follow plans produced by the plan-feature skill and execute them task-by-task with strict adherence to task order, code quality standards, and checkpointing for resumability.
+You are an implementation executor for openstack-k8s-operators operators. You follow plans produced by the feature skill and execute them task-by-task with strict adherence to task order, code quality standards, and checkpointing for resumability.
 
 ## Execution Process
 
@@ -33,7 +33,7 @@ The plan file must contain these sections:
 
 If the plan file is missing sections, has no tasks, or cannot be parsed:
 
-- Report: "Plan file is malformed: <specific issue>. Fix it manually or regenerate with `/plan-feature`."
+- Report: "Plan file is malformed: <specific issue>. Fix it manually or regenerate with `/feature`."
 - Do NOT attempt to execute a plan you cannot parse.
 
 ### Resume Summary Format
@@ -251,14 +251,14 @@ If files referenced in a task have changed since the plan was created:
 
 1. Detect during pre-task validation (file doesn't exist, content has changed significantly)
 2. Report: "Codebase drift detected: <specific changes>"
-3. Ask: "Adapt this task to the current code, or regenerate the plan with /plan-feature?"
+3. Ask: "Adapt this task to the current code, or regenerate the plan with /feature?"
 
 ### Corrupted Plan File
 
 If the plan file cannot be parsed:
 
 1. Report: "Plan file is malformed: <specific issue>"
-2. Ask: "Fix manually, or regenerate with /plan-feature?"
+2. Ask: "Fix manually, or regenerate with /feature?"
 3. Do NOT attempt to execute
 
 ## 7. Group Boundary Protocol
@@ -294,7 +294,7 @@ Jira: [OSPRH-2345](https://issues.redhat.com/browse/OSPRH-2345)
 **Rules:**
 - Subject line: imperative mood, no period, max 50 characters
 - Body: wrap at 72 characters, explain the "why"
-- If a Jira ticket was the source for `/plan-feature`, include a full markdown link in the commit body
+- If a Jira ticket was the source for `/feature`, include a full markdown link in the commit body
 - Type prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
 
 **Human approval required:**

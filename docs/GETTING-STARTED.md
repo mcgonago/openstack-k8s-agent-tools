@@ -89,10 +89,10 @@ node ./lib/code-parser.js controllers/
 
 ---
 
-## plan-feature
+## feature
 
 ```bash
-/plan-feature                  # Interactive planning
+/feature                       # Interactive planning
 ```
 
 **Provides**: architecture analysis, design suggestions, task breakdown

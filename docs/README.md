@@ -29,7 +29,7 @@ cp /path/to/openstack-k8s-agent-tools/CLAUDE.md .
 | **code-style** | Go style enforcement | `/code-style` |
 | **analyze-logs** | Log pattern analysis | `/analyze-logs` |
 | **explain-flow** | Code flow analysis | `/explain-flow` |
-| **plan-feature** | Feature planning | `/plan-feature` |
+| **feature** | Feature planning | `/feature` |
 
 ## Common Workflows
 

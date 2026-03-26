@@ -27,8 +27,8 @@ claude plugin update openstack-k8s-agent-tools
 |-----------|----------|---------|
 | Go toolchain | Yes | Operator development, tests, linting |
 | make | Yes | Build system (make test, make manifests, etc.) |
-| gh (GitHub CLI) | Optional | Cross-repo analysis in `/plan-feature` when local checkouts aren't available |
-| Atlassian MCP | Optional | Jira ticket reading in `/plan-feature` — configure in Claude Code settings |
+| gh (GitHub CLI) | Optional | Cross-repo analysis in `/feature` when local checkouts aren't available |
+| Atlassian MCP | Optional | Jira ticket reading in `/feature` — configure in Claude Code settings |
 | golangci-lint | Optional | Enhanced linting in `/test-operator` |
 | gosec, govulncheck | Optional | Security scanning in `/test-operator security` |
 
@@ -41,7 +41,7 @@ claude plugin update openstack-k8s-agent-tools
 | `/code-style` | — | Go code style enforcement (gopls modernize, conventions) |
 | `/analyze-logs` | — | Log pattern recognition (25+ patterns) |
 | `/explain-flow` | — | Code flow analysis for controllers |
-| `/plan-feature` | `plan-feature` | Feature/bug planning with Jira, cross-repo analysis, structured strategies |
+| `/feature` | `feature` | Feature/bug planning with Jira, cross-repo analysis, structured strategies |
 | `/code-review` | `code-review` | Code review against openstack-k8s-operators conventions |
 | `/task-executor` | `task-executor` | Execute plans task-by-task with checkpointing and resume |
 
@@ -55,10 +55,10 @@ Skills with an agent load an `AGENT.md` file that contains the full domain knowl
 cd ~/go/src/github.com/openstack-k8s-operators/heat-operator
 
 # Plan from Jira (requires Atlassian MCP)
-/plan-feature OSPRH-4567
+/feature OSPRH-4567
 
 # Or plan from a local spec file
-/plan-feature docs/my-feature-spec.md
+/feature docs/my-feature-spec.md
 ```
 
 The skill fetches the ticket, analyzes your codebase and cross-references lib-common and peer operators, runs an 11-principle planning checklist, proposes implementation strategies, and produces a task breakdown. Then execute it:
@@ -67,7 +67,7 @@ The skill fetches the ticket, analyzes your codebase and cross-references lib-co
 /task-executor   # discovers plans for current operator automatically
 ```
 
-See [docs/plan-feature.md](docs/plan-feature.md) for a full walkthrough.
+See [docs/feature.md](docs/feature.md) for a full walkthrough.
 
 ### Development loop
 
@@ -108,15 +108,15 @@ kubectl logs deployment/nova-operator -n openstack > nova.log
 ### Feature Development
 
 ```
-/plan-feature OSPRH-2345 --> /task-executor --> /test-operator full --> /code-review --> PR
+/feature OSPRH-2345 --> /task-executor --> /test-operator full --> /code-review --> PR
 ```
 
-See [docs/plan-feature.md](docs/plan-feature.md) for detailed flow diagrams.
+See [docs/feature.md](docs/feature.md) for detailed flow diagrams.
 
 ### Bug Fix
 
 ```
-/analyze-logs --> /debug-operator --> /plan-feature OSPRH-XXX --> /task-executor --> /test-operator full --> PR
+/analyze-logs --> /debug-operator --> /feature OSPRH-XXX --> /task-executor --> /test-operator full --> PR
 ```
 
 ### Daily Development
@@ -132,8 +132,8 @@ write code --> /test-operator quick --> /test-operator focus "..." --> /code-sty
 |                                                                        |
 |  PLANNING & EXECUTION          QUALITY & REVIEW                        |
 |                                                                        |
-|  /plan-feature -----+         /test-operator                           |
-|  [plan-feature]     |           quick | standard | full                |
+|  /feature ----------+         /test-operator                           |
+|  [feature]          |           quick | standard | full                |
 |       |             |                |                                 |
 |       v             |         /code-style                              |
 |  ~/.local/share/    |           gopls modernize                        |
@@ -154,8 +154,8 @@ write code --> /test-operator quick --> /test-operator focus "..." --> /code-sty
 |                                                                        |
 +------------------------------------------------------------------------+
 |  AGENTS              | EXTERNAL INTEGRATIONS                           |
-|  plan-feature        | [Atlassian MCP] --> /plan-feature (Jira)        |
-|  task-executor       | [GitHub CLI]    --> /plan-feature (repos)       |
+|  feature             | [Atlassian MCP] --> /feature (Jira)             |
+|  task-executor       | [GitHub CLI]    --> /feature (repos)            |
 |  code-review         | [lib-common]    --> plan + execute (reuse)      |
 |                      | [dev-docs]      --> plan + review (conventions) |
 +------------------------------------------------------------------------+
@@ -164,14 +164,14 @@ write code --> /test-operator quick --> /test-operator focus "..." --> /code-sty
 ## Documentation
 
 - **[Getting Started](docs/GETTING-STARTED.md)** — quick reference for all skills
-- **[Plan Feature Guide](docs/plan-feature.md)** — detailed walkthrough with use case
+- **[Feature Planning Guide](docs/feature.md)** — detailed walkthrough with use case
 - **[Development Guide](docs/DEVELOPMENT.md)** — extending the plugin with new skills
 - **[CLAUDE.md](CLAUDE.md)** — project conventions and skill reference
 
 ## Roadmap
 
 - [ ] `install.sh` — manual installation script with platform support (Claude Code, OpenCode, others)
-- [ ] Session management for `/plan-feature` and `/task-executor`
+- [ ] Session management for `/feature` and `/task-executor`
 - [ ] Jira sub-task export from task breakdowns
 - [ ] Plan diffing (detect Jira ticket changes after plan creation)
 

@@ -336,7 +336,7 @@ git diff --exit-code api/ config/
 
 - **debug-operator**: Use test failures to guide debugging
 - **code-style**: Enforce style before testing
-- **plan-feature**: Include tests in feature planning
+- **feature**: Include tests in feature planning
 - **analyze-logs**: Parse test output for patterns
 
 ## Best Practices

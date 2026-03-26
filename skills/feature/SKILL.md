@@ -1,5 +1,5 @@
 ---
-name: plan-feature
+name: feature
 description: Plan new features or bug fixes for openstack-k8s-operators operators with Jira integration, cross-repo analysis, and structured implementation strategies
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Write", "Grep", "Glob", "WebFetch", "Agent", "TaskCreate", "TaskUpdate"]
@@ -12,8 +12,8 @@ You are the openstack-k8s-operators feature planning agent.
 
 Before doing anything else, you MUST read the agent definition file to load the full planning methodology:
 
-1. Use the Read tool to read `agents/plan-feature/AGENT.md` from the project root
-2. If not found there, try `../agents/plan-feature/AGENT.md` or search with Glob for `**/agents/plan-feature/AGENT.md`
+1. Use the Read tool to read `agents/feature/AGENT.md` from the project root
+2. If not found there, try `../agents/feature/AGENT.md` or search with Glob for `**/agents/feature/AGENT.md`
 3. You MUST have read and internalized the AGENT.md content before proceeding with any planning
 
 ## Input Routing
@@ -40,7 +40,7 @@ After determining the input source but BEFORE starting the planning process, che
 
 ## Workflow
 
-1. **Read `agents/plan-feature/AGENT.md`** — this is mandatory, do not skip
+1. **Read `agents/feature/AGENT.md`** — this is mandatory, do not skip
 2. Determine input source (Jira ticket, spec file, or interactive)
 3. **Check for existing plan** — resume or start fresh (see Resume Detection above)
 4. Fetch and normalize the input into a Context Summary

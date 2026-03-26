@@ -1,4 +1,4 @@
-# /plan-feature — Feature Planning Guide
+# /feature — Feature Planning Guide
 
 Plan features and bug fixes for openstack-k8s-operators operators with Jira integration, cross-repo analysis, and structured implementation strategies.
 
@@ -6,13 +6,13 @@ Plan features and bug fixes for openstack-k8s-operators operators with Jira inte
 
 ```bash
 # From a Jira ticket (requires Atlassian MCP configured)
-/plan-feature OSPRH-2345
+/feature OSPRH-2345
 
 # From a local spec file
-/plan-feature docs/my-feature-spec.md
+/feature docs/my-feature-spec.md
 
 # Interactive — the skill asks what you have
-/plan-feature
+/feature
 ```
 
 ## How It Works
@@ -24,8 +24,8 @@ Plan features and bug fixes for openstack-k8s-operators operators with Jira inte
       |                               |                      |
       +-------------------------------+----------------------+
                                       |
-                              /plan-feature
-                              [agent: plan-feature]
+                              /feature
+                              [agent: feature]
                                       |
               +-----------+-----------+-----------+
               |           |           |           |
@@ -61,8 +61,8 @@ Plan features and bug fixes for openstack-k8s-operators operators with Jira inte
 
 ```
 +---------------------------------------------------------------+
-|                     /plan-feature                              |
-|                     [agent: plan-feature]                      |
+|                     /feature                                   |
+|                     [agent: feature]                           |
 +---------------------------------------------------------------+
 |                                                                |
 |  1. INPUT NORMALIZATION                                        |
@@ -147,7 +147,7 @@ Plan features and bug fixes for openstack-k8s-operators operators with Jira inte
 |  ON ERROR:                                                     |
 |    task failure   --> stop, report, keep [ ], ask user         |
 |    codebase drift --> detect, ask adapt or regenerate          |
-|    corrupt plan   --> report, ask fix or /plan-feature again   |
+|    corrupt plan   --> report, ask fix or /feature again        |
 |                                                                |
 |  ON QUIT:                                                      |
 |    plan file has current progress --> /task-executor to resume  |
@@ -168,7 +168,7 @@ You're working on `heat-operator` and need to add topology/affinity support (Jir
 
 ```bash
 cd ~/go/src/github.com/openstack-k8s-operators/heat-operator
-/plan-feature OSPRH-4567
+/feature OSPRH-4567
 ```
 
 ### Step 2: The skill fetches and normalizes the ticket
@@ -258,7 +258,7 @@ The task-executor picks up the plan file, shows progress, and executes tasks one
 
 ## Related Skills
 
-- **`/task-executor`** — executes plans produced by `/plan-feature`
+- **`/task-executor`** — executes plans produced by `/feature`
 - **`/code-review`** — reviews code against the same conventions the planner checks
 - **`/debug-operator`** — useful when the ticket is a bug and you need runtime analysis first
 - **`/test-operator`** — run tests during or after plan execution
@@ -266,5 +266,5 @@ The task-executor picks up the plan file, shows progress, and executes tasks one
 ## Reference
 
 - [Design spec](specs/2026-03-25-plan-feature-enhancement-design.md)
-- [agents/plan-feature/AGENT.md](../agents/plan-feature/AGENT.md) — full planning methodology
+- [agents/feature/AGENT.md](../agents/feature/AGENT.md) — full planning methodology
 - [agents/task-executor/AGENT.md](../agents/task-executor/AGENT.md) — execution principles
