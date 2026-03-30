@@ -44,7 +44,7 @@ The agent handles: sequential execution, test-first, checkpointing, group bounda
    a. Draft commit message (with Jira link if applicable) and present for approval
    b. Commit with `-s -S` only after user approves — NEVER push
    c. Update the plan file with an Outcome section
-   d. If Jira-sourced: ask if a summary comment should be posted to the ticket
+   d. If Jira-sourced: follow `/jira` skill rules — post outcome comment on the **story** (never the epic), and optionally suggest creating Jira tasks from the plan breakdown
 
 ## Quick Reference
 

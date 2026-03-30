@@ -12,7 +12,9 @@ You are the openstack-k8s-operators feature planning skill. You orchestrate the 
 
 Determine the input source:
 
-1. **Jira ticket**: If the argument matches a Jira ticket pattern (e.g., `OSPRH-2345`, `RHOSZ-1234` — uppercase letters, dash, digits), fetch the ticket via Atlassian MCP.
+1. **Jira ticket**: If the argument matches a Jira ticket pattern (e.g., `OSPRH-2345`, `RHOSZ-1234` — uppercase letters, dash, digits):
+   - Fetch the ticket via Atlassian MCP
+   - **Validate Jira hierarchy** (see `/jira` skill rules): if the ticket is an epic with no linked story, warn the user and suggest creating a story first. If it's a story or bug, proceed.
    - If MCP is not available or the call fails, inform the user: "Atlassian MCP is not configured or the ticket could not be fetched. Please provide a spec file path or paste the ticket content."
 2. **Spec file**: If the argument is a file path (e.g., `spec.md`, `docs/my-feature.md`) and the file exists on disk, read it.
 3. **Interactive**: If no argument is provided, ask: "Do you have a Jira ticket ID (e.g., OSPRH-2345) or a spec file path?"
@@ -56,6 +58,13 @@ When resuming, pass the existing plan content to the agent so it can skip comple
 
 - **Atlassian MCP** (optional): Configure the Atlassian MCP server in Claude Code settings for Jira integration. Without it, the skill works with spec files or pasted content.
 - **GitHub CLI** (optional): `gh` CLI for remote repo browsing when local checkouts are not available.
+
+## Jira Integration
+
+This skill follows the hierarchy rules defined in the `/jira` skill:
+- Outcome comments go on the **story**, never on the epic
+- If the input ticket is an epic with no stories, suggest creating one before planning
+- Tasks from the plan breakdown can optionally be created as Jira tasks under the story
 
 ## Quick Reference
 
