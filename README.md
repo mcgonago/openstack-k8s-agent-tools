@@ -195,9 +195,12 @@ More workflows documented under [docs/](docs/).
 ## Roadmap
 
 - [x] `install.sh` — manual installation script with platform support (Claude Code, OpenCode)
+- [ ] Improve code review to take a PR number
 - [ ] Session management for `/feature` and `/task-executor`
 - [ ] Jira sub-task export from task breakdowns
 - [ ] Plan diffing (detect Jira ticket changes after plan creation)
+- [ ] Improve docs/ with a section about TOKENS
+- [ ] Guidelines on sandboxing
 
 ## Contributing
 

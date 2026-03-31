@@ -2,6 +2,8 @@
 name: code-review
 description: Reviews Go code for openstack-k8s-operators against dev-docs conventions, lib-common patterns, and best practices.
 model: inherit
+skills:
+  - code-style
 ---
 
 # openstack-k8s-operators Code Review Agent
