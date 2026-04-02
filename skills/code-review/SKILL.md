@@ -12,7 +12,7 @@ You are the openstack-k8s-operators code review skill. You determine the review 
 
 Determine the review scope from the argument:
 
-1. **PR number**: `/code-review 123` or `/code-review PR#123`
+1. **PR number**: `/code-review 123` or `/code-review PR#123` — uses `gh` CLI to fetch the PR from the **current repository**
 2. **PR URL**: `/code-review https://github.com/openstack-k8s-operators/glance-operator/pull/123`
 3. **Branch diff**: `/code-review` (no argument) — diff current branch against `main`
 4. **Specific files**: `/code-review path/to/file.go`
@@ -21,10 +21,10 @@ Determine the review scope from the argument:
 
 ### For PR reviews
 
-Try `gh` CLI first (read-only operations only):
+When only a number is provided, the skill relies on `gh` CLI operating against the current git repository. Try `gh` first (read-only operations only):
 
 ```bash
-# Get the diff
+# Get the diff (from the current repository)
 gh pr diff <number>
 
 # Get PR metadata (title, description, labels, reviewers)
@@ -40,11 +40,15 @@ gh pr view <number> --comments
 If `gh` is not available or fails (not authenticated, not installed):
 
 1. Inform the user: "GitHub CLI not available. Fetching PR via web."
-2. Fall back to WebFetch to read the PR page:
-   - Construct the URL: `https://github.com/<owner>/<repo>/pull/<number>.diff`
-   - Fetch with WebFetch to get the raw diff
-   - For metadata, fetch `https://github.com/<owner>/<repo>/pull/<number>`
-3. If both fail, ask the user to provide the diff manually: "Could not fetch PR. Paste the diff or provide file paths to review."
+2. Derive `<owner>/<repo>` from the current git remote:
+   ```bash
+   git remote -v
+   ```
+   Pick the first remote that points to GitHub (prefer `origin` if it exists, otherwise use whatever is available). Parse the URL to extract the GitHub owner and repository name.
+3. Fall back to WebFetch:
+   - Fetch the raw diff: `https://github.com/<owner>/<repo>/pull/<number>.diff`
+   - Fetch PR metadata: `https://github.com/<owner>/<repo>/pull/<number>`
+4. If both fail, ask the user to provide the diff manually: "Could not fetch PR. Paste the diff or provide file paths to review."
 
 ### For branch diffs
 

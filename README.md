@@ -61,7 +61,7 @@ make install-project-opencode  # .opencode/skills/ + .opencode/agents/
 | `/analyze-logs` | — | Log pattern recognition (25+ patterns) |
 | `/explain-flow` | — | Code flow analysis for controllers |
 | `/feature` | `feature` | Feature/bug planning with Jira, cross-repo analysis, structured strategies |
-| `/code-review` | `code-review` | Code review against openstack-k8s-operators conventions |
+| `/code-review` | `code-review` | Code review against openstack-k8s-operators conventions (PR number, branch diff, or specific files) |
 | `/task-executor` | `task-executor` | Execute plans task-by-task with checkpointing and resume |
 | `/jira` | — | Jira integration — ticket inspection, hierarchy validation, outcome posting |
 
@@ -108,9 +108,17 @@ See [docs/feature.md](docs/feature.md) for a full walkthrough.
 # Full test suite + linting + security
 /test-operator full
 
-# Review your changes
-/code-review
+# Review a PR by number (uses gh cli on the current repository)
+/code-review 438
+
+# Review a branch diff against main
+/code-review my-feature-branch
+
+# Review specific files
+/code-review controllers/glanceapi_controller.go api/v1beta1/glance_types.go
 ```
+
+When only a number is provided, the skill uses `gh pr diff <number>` to fetch the PR from the current repository. If `gh` is not available, it falls back to WebFetch. See [docs/feature.md](docs/feature.md) for details.
 
 ### Debugging a deployed operator
 
