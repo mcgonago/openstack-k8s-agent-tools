@@ -15,13 +15,14 @@ You have deep expertise in controller-runtime, lib-common, Ginkgo/EnvTest testin
 ## Planning Process
 
 1. **Normalize input** into a Context Summary (from Jira ticket or spec file).
-2. **Check for existing plan** — auto-detect and offer resume or start fresh (see Section 7).
-3. **Analyze the codebase** — current operator, lib-common, peer operators, dev-docs.
-4. **Run the planning checklist** — assess every principle.
-5. **Propose 2-3 implementation strategies** with trade-offs and a recommendation.
-6. **Wait for user approval** of a strategy before creating the task breakdown.
-7. **Produce the task breakdown** grouped by functional area.
-8. **Write the plan file** to `~/.local/share/openstack-k8s-agent-tools/plans/<operator-name>/YYYY-MM-DD-<ticket-or-slug>-plan.md`.
+2. **Jira context gathering** — if the input is a Jira ticket, walk the full hierarchy and collect context (see Section 1b).
+3. **Check for existing plan** — auto-detect and offer resume or start fresh (see Section 7).
+4. **Analyze the codebase** — current operator, lib-common, peer operators, dev-docs.
+5. **Run the planning checklist** — assess every principle.
+6. **Propose 2-3 implementation strategies** with trade-offs and a recommendation.
+7. **Wait for user approval** of a strategy before creating the task breakdown.
+8. **Produce the task breakdown** grouped by functional area.
+9. **Write the plan file** to `~/.local/share/openstack-k8s-agent-tools/plans/<operator-name>/YYYY-MM-DD-<ticket-or-slug>-plan.md`.
 
 When resuming, skip completed steps and pick up from the first missing section.
 
@@ -75,6 +76,58 @@ Regardless of source, produce this normalized structure:
 ### Linked Issues / References
 - <related tickets or docs>
 ```
+
+## 1b. Jira Context Gathering
+
+When the input is a Jira ticket, perform a deep inspection of the surrounding hierarchy BEFORE analyzing code. This provides essential context about related work, prior decisions, and available resources.
+
+### Step 1: Walk Up the Hierarchy
+
+From the input ticket, traverse upward:
+- Story/Task/Bug → find the parent Epic
+- Epic → find the parent Feature or Initiative
+- Stop at the Feature/Initiative level
+
+### Step 2: Inspect All Children at Each Level
+
+From the Feature/Initiative, inspect ALL child Epics. For each Epic, inspect ALL children (Stories, Tasks, Spikes, Bugs). Collect:
+
+- **Ticket summaries**: what each sibling Epic/Story covers
+- **Statuses**: which work is done, in progress, or blocked
+- **Spikes**: research outcomes that inform the current work
+- **Linked PRs**: merged or open PRs referenced in any related ticket
+- **External links**: design docs, dev-docs references, Confluence pages, etherpads
+- **Comments**: relevant discussion, decisions, or context from ticket comments
+- **Blockers**: anything that blocks or is blocked by the current work
+
+### Step 3: Produce a Jira Context Summary
+
+Add this section to the plan before the Impact Analysis:
+
+```
+## Jira Context
+
+**Feature/Initiative:** OSPRH-500 — Glance operator enhancements
+**Target Epic:** OSPRH-1000 — Add topology support
+
+### Related Work Under This Feature
+| Ticket | Type | Status | Summary |
+|--------|------|--------|---------|
+| OSPRH-1001 | Epic | Done | Glance API v2 migration |
+| OSPRH-1050 | Spike | Closed | Investigate topology approach |
+| OSPRH-2345 | Story | In Progress | Add topology to GlanceAPI (this work) |
+| OSPRH-2346 | Story | Backlog | Add topology to GlanceInternal |
+
+### Relevant Resources
+- PR #423 (nova-operator): topology implementation — merged, use as reference
+- Spike OSPRH-1050 outcome: recommended using lib-common topology module
+- dev-docs: no topology convention yet, follow lib-common pattern
+
+### Prior Decisions
+- <decisions extracted from ticket comments or spike outcomes>
+```
+
+If Atlassian MCP is not available, skip this step and note "Jira context gathering skipped — MCP not available."
 
 ## 2. Cross-Repo Analysis Procedure
 

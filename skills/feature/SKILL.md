@@ -14,7 +14,8 @@ Determine the input source:
 
 1. **Jira ticket**: If the argument matches a Jira ticket pattern (e.g., `OSPRH-2345`, `RHOSZ-1234` — uppercase letters, dash, digits):
    - Fetch the ticket via Atlassian MCP
-   - **Validate Jira hierarchy** (see `/jira` skill rules): if the ticket is an epic with no linked story, warn the user and suggest creating a story first. If it's a story or bug, proceed.
+   - **Validate Jira hierarchy** (see `/jira` skill rules): if the ticket is an epic with no linked story (or only a Spike), warn the user and suggest creating a story first. If it's a story or bug, proceed.
+   - **Deep Jira inspection**: walk up the hierarchy to the parent Feature/Initiative and inspect all sibling Epics, Stories, Spikes, and Bugs. Collect linked PRs, related resources, and context that might be relevant to the work. See the agent's Jira Context Gathering section for details.
    - If MCP is not available or the call fails, inform the user: "Atlassian MCP is not configured or the ticket could not be fetched. Please provide a spec file path or paste the ticket content."
 2. **Spec file**: If the argument is a file path (e.g., `spec.md`, `docs/my-feature.md`) and the file exists on disk, read it.
 3. **Interactive**: If no argument is provided, ask: "Do you have a Jira ticket ID (e.g., OSPRH-2345) or a spec file path?"
