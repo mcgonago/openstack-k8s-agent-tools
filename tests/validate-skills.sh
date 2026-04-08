@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." &>/dev/null && pwd)"
 REPO_URL="${1:-https://github.com/openstack-k8s-operators/glance-operator.git}"
 OPERATOR_NAME="$(basename "$REPO_URL" .git)"
 
