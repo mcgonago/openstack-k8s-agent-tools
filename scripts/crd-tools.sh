@@ -14,7 +14,7 @@ NC='\033[0m'
 list_crds() {
     local pattern="${1:-openstack}"
 
-    echo -e "${BLUE}📜 openstack-k8s-operators Custom Resource Definitions${NC}"
+    echo -e "${BLUE}openstack-k8s-operators Custom Resource Definitions${NC}"
     echo "======================================"
 
     echo -e "\n${YELLOW}CRDs matching '$pattern':${NC}"
@@ -32,19 +32,19 @@ analyze_crd() {
         return 1
     fi
 
-    echo -e "${BLUE}🔍 Analyzing CRD: $crd_name${NC}"
+    echo -e "${BLUE}Analyzing CRD: $crd_name${NC}"
     echo "==============================="
 
     # Basic info
-    echo -e "\n${YELLOW}📋 Basic Information:${NC}"
+    echo -e "\n${YELLOW}Basic Information:${NC}"
     kubectl get crd "$crd_name" -o custom-columns="NAME:.metadata.name,GROUP:.spec.group,KIND:.spec.names.kind,VERSION:.spec.versions[0].name" --no-headers
 
     # Versions
-    echo -e "\n${YELLOW}📊 Supported Versions:${NC}"
+    echo -e "\n${YELLOW}Supported Versions:${NC}"
     kubectl get crd "$crd_name" -o jsonpath='{.spec.versions[*].name}' | tr ' ' '\n'
 
     # Schema info
-    echo -e "\n${YELLOW}🗂️  Schema Properties:${NC}"
+    echo -e "\n${YELLOW}Schema Properties:${NC}"
     local schema=$(kubectl get crd "$crd_name" -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties}' 2>/dev/null)
     if [ -n "$schema" ]; then
         echo "$schema" | jq -r 'keys[]' 2>/dev/null | head -10 || echo "Schema information not available"
@@ -71,7 +71,7 @@ list_instances() {
         return 1
     fi
 
-    echo -e "${BLUE}📦 Instances of $crd_name${NC}"
+    echo -e "${BLUE}Instances of $crd_name${NC}"
     echo "=========================="
 
     if [ "$namespace" = "--all-namespaces" ]; then
@@ -97,19 +97,19 @@ check_instance_status() {
         ns_flag="-n $namespace"
     fi
 
-    echo -e "${BLUE}📊 Status for $resource_type/$resource_name${NC}"
+    echo -e "${BLUE}Status for $resource_type/$resource_name${NC}"
     echo "========================================="
 
     # Get resource details
-    echo -e "\n${YELLOW}📋 Resource Details:${NC}"
+    echo -e "\n${YELLOW}Resource Details:${NC}"
     kubectl get "$resource_type" "$resource_name" $ns_flag -o wide 2>/dev/null || echo "Resource not found"
 
     # Get status conditions
-    echo -e "\n${YELLOW}🔍 Status Conditions:${NC}"
+    echo -e "\n${YELLOW}Status Conditions:${NC}"
     kubectl get "$resource_type" "$resource_name" $ns_flag -o jsonpath='{.status.conditions}' 2>/dev/null | jq '.' 2>/dev/null || echo "No status conditions"
 
     # Get events
-    echo -e "\n${YELLOW}📅 Related Events:${NC}"
+    echo -e "\n${YELLOW}Related Events:${NC}"
     kubectl get events $ns_flag --field-selector involvedObject.name="$resource_name" --sort-by='.lastTimestamp' 2>/dev/null | tail -10 || echo "No events found"
 }
 
@@ -129,7 +129,7 @@ validate_instances() {
         return 1
     fi
 
-    echo -e "${BLUE}✅ Validating instances of $crd_name${NC}"
+    echo -e "${BLUE}Validating instances of $crd_name${NC}"
     echo "======================================"
 
     # Get all instances
@@ -147,9 +147,9 @@ validate_instances() {
         # Check if ready
         local ready=$(kubectl get "$resource_name" "$name" -n "$namespace" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
         if [ "$ready" = "True" ]; then
-            echo -e "${GREEN}  ✅ Ready${NC}"
+            echo -e "${GREEN}  Ready${NC}"
         else
-            echo -e "${RED}  ❌ Not Ready${NC}"
+            echo -e "${RED}  Not Ready${NC}"
             # Show reason if available
             local reason=$(kubectl get "$resource_name" "$name" -n "$namespace" -o jsonpath='{.status.conditions[?(@.type=="Ready")].reason}' 2>/dev/null)
             [ -n "$reason" ] && echo -e "     Reason: $reason"
@@ -158,7 +158,7 @@ validate_instances() {
         # Check for errors in status
         local error_conditions=$(kubectl get "$resource_name" "$name" -n "$namespace" -o jsonpath='{.status.conditions[?(@.status=="False")]}' 2>/dev/null)
         if [ -n "$error_conditions" ] && [ "$error_conditions" != "null" ]; then
-            echo -e "${RED}  ⚠️  Has error conditions${NC}"
+            echo -e "${RED}  Has error conditions${NC}"
         fi
     done
 }
@@ -172,7 +172,7 @@ show_dependencies() {
         return 1
     fi
 
-    echo -e "${BLUE}🔗 Dependencies for $crd_name${NC}"
+    echo -e "${BLUE}Dependencies for $crd_name${NC}"
     echo "=============================="
 
     # Look for owner references in instances
@@ -201,7 +201,7 @@ monitor_changes() {
         return 1
     fi
 
-    echo -e "${BLUE}👁️  Monitoring changes to $resource_type${NC}"
+    echo -e "${BLUE}Monitoring changes to $resource_type${NC}"
     echo "================================="
     echo "Press Ctrl+C to stop..."
 
@@ -216,7 +216,7 @@ monitor_changes() {
 show_stats() {
     local pattern="${1:-openstack}"
 
-    echo -e "${BLUE}📊 CRD Usage Statistics${NC}"
+    echo -e "${BLUE}CRD Usage Statistics${NC}"
     echo "========================"
 
     local crds=$(kubectl get crd | grep "$pattern" | awk '{print $1}')
@@ -238,7 +238,7 @@ show_stats() {
 
 # Main help function
 show_help() {
-    echo -e "${BLUE}🗂️  openstack-k8s-operators CRD Tools${NC}"
+    echo -e "${BLUE}openstack-k8s-operators CRD Tools${NC}"
     echo "==================="
     echo
     echo "Available commands:"

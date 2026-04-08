@@ -72,7 +72,7 @@ run_test() {
 
 # Quick tests (fast feedback)
 run_quick_tests() {
-    echo -e "${BLUE}🚀 Running Quick Tests${NC}"
+    echo -e "${BLUE}Running Quick Tests${NC}"
     echo "==================================="
 
     check_operator_directory || return 1
@@ -91,7 +91,7 @@ run_quick_tests() {
 
 # Standard tests (pre-commit)
 run_standard_tests() {
-    echo -e "${BLUE}📋 Running Standard Tests${NC}"
+    echo -e "${BLUE}Running Standard Tests${NC}"
     echo "===================================="
 
     check_operator_directory || return 1
@@ -107,7 +107,7 @@ run_standard_tests() {
 
 # Full tests (pre-PR)
 run_full_tests() {
-    echo -e "${BLUE}🔍 Running Full Test Suite${NC}"
+    echo -e "${BLUE}Running Full Test Suite${NC}"
     echo "====================================="
 
     check_operator_directory || return 1
@@ -137,7 +137,7 @@ run_full_tests() {
 
 # Security scanning
 run_security_scan() {
-    echo -e "${BLUE}🔒 Running Security Scan${NC}"
+    echo -e "${BLUE}Running Security Scan${NC}"
     echo "================================"
 
     check_operator_directory || return 1
@@ -168,7 +168,7 @@ run_security_scan() {
 
 # Test coverage analysis
 run_coverage_analysis() {
-    echo -e "${BLUE}📊 Running Coverage Analysis${NC}"
+    echo -e "${BLUE}Running Coverage Analysis${NC}"
     echo "===================================="
 
     check_operator_directory || return 1
@@ -210,7 +210,7 @@ run_focused_test() {
 
     check_operator_directory || return 1
 
-    echo -e "${BLUE}🎯 Running Focused Test${NC}"
+    echo -e "${BLUE}Running Focused Test${NC}"
     echo "Pattern: $pattern"
     echo "================================"
 
@@ -219,7 +219,7 @@ run_focused_test() {
 
 # Lint only mode
 run_lint_only() {
-    echo -e "${BLUE}🔍 Running Lint Checks Only${NC}"
+    echo -e "${BLUE}Running Lint Checks Only${NC}"
     echo "======================================"
 
     check_operator_directory || return 1
@@ -236,7 +236,7 @@ run_lint_only() {
 
 # Fix common issues
 run_auto_fix() {
-    echo -e "${BLUE}🔧 Running Auto-Fix${NC}"
+    echo -e "${BLUE}Running Auto-Fix${NC}"
     echo "==============================="
 
     check_operator_directory || return 1
@@ -278,7 +278,7 @@ run_auto_fix() {
 
 # Install recommended tools
 install_tools() {
-    echo -e "${BLUE}🛠️  Installing Recommended Tools${NC}"
+    echo -e "${BLUE}Installing Recommended Tools${NC}"
     echo "======================================="
 
     local tools=(
@@ -300,7 +300,7 @@ install_tools() {
 # Show test summary
 show_summary() {
     echo
-    echo -e "${BLUE}📋 Test Summary${NC}"
+    echo -e "${BLUE}Test Summary${NC}"
     echo "==============="
     echo -e "Total tests:  ${TESTS_RUN}"
     echo -e "Passed:       ${GREEN}${TESTS_PASSED}${NC}"
@@ -312,17 +312,17 @@ show_summary() {
     fi
 
     if [ $TESTS_FAILED -eq 0 ]; then
-        echo -e "\n${GREEN}🎉 All tests passed!${NC}"
+        echo -e "\n${GREEN}All tests passed!${NC}"
         return 0
     else
-        echo -e "\n${RED}❌ Some tests failed${NC}"
+        echo -e "\n${RED}Some tests failed${NC}"
         return 1
     fi
 }
 
 # Help menu
 show_help() {
-    echo -e "${BLUE}🧪 openstack-k8s-operators Operator Testing Workflow${NC}"
+    echo -e "${BLUE}openstack-k8s-operators Operator Testing Workflow${NC}"
     echo "====================================="
     echo
     echo "Available commands:"

@@ -41,8 +41,8 @@ make test GINKGO_ARGS="--focus 'pattern'"
 ```bash
 /code-style                    # Analyze code
 
-node ./lib/style-analyzer.js file.go
-node ./lib/style-analyzer.js --modernize file.go
+python3 ./lib/style-analyzer.py file.go
+python3 ./lib/style-analyzer.py --modernize file.go
 ```
 
 **Detects**: old syntax, missing error wrapping, controller anti-patterns
@@ -55,9 +55,9 @@ node ./lib/style-analyzer.js --modernize file.go
 /analyze-logs                  # Interactive
 
 kubectl logs deployment/op -n ns > op.log
-node ./lib/log-analyzer.js op.log
-node ./lib/log-analyzer.js --verbose op.log
-node ./lib/log-analyzer.js --patterns
+python3 ./lib/log-analyzer.py op.log
+python3 ./lib/log-analyzer.py --verbose op.log
+python3 ./lib/log-analyzer.py --patterns
 ```
 
 **Finds**: errors (API/RBAC/runtime), performance issues, OpenStack problems
@@ -69,8 +69,8 @@ node ./lib/log-analyzer.js --patterns
 ```bash
 /explain-flow                  # Parse current dir
 
-node ./lib/code-parser.js .
-node ./lib/code-parser.js controllers/
+python3 ./lib/code-parser.py .
+python3 ./lib/code-parser.py controllers/
 ```
 
 **Extracts**: reconcile functions, flow steps, error handling, CRDs

@@ -95,7 +95,7 @@ echo
 echo -e "${BLUE}[code-style] Analyze controller file${NC}"
 CONTROLLER=$(find "$OPERATOR_DIR" -name "*_controller.go" -not -path "*/vendor/*" | head -1)
 if [ -n "$CONTROLLER" ]; then
-    OUTPUT=$(node "$SCRIPT_DIR/lib/style-analyzer.js" "$CONTROLLER" 2>&1)
+    OUTPUT=$(python3 "$SCRIPT_DIR/lib/style-analyzer.py" "$CONTROLLER" 2>&1)
     if echo "$OUTPUT" | grep -q "Style Analysis Report"; then
         pass "code-style analyzer produces report"
     else
@@ -103,7 +103,7 @@ if [ -n "$CONTROLLER" ]; then
     fi
 
     # Verify no false critical issues on Reconcile signature
-    CRITICAL=$(node "$SCRIPT_DIR/lib/style-analyzer.js" --critical "$CONTROLLER" 2>&1)
+    CRITICAL=$(python3 "$SCRIPT_DIR/lib/style-analyzer.py" --critical "$CONTROLLER" 2>&1)
     if echo "$CRITICAL" | grep -q "Critical issues: 0"; then
         pass "code-style no false positives on Reconcile signature"
     else
@@ -120,7 +120,7 @@ echo
 echo -e "${BLUE}[explain-flow] Parse controllers${NC}"
 CONTROLLER_DIR=$(find "$OPERATOR_DIR" -type d -name "controller" -not -path "*/vendor/*" | head -1)
 if [ -n "$CONTROLLER_DIR" ]; then
-    OUTPUT=$(node "$SCRIPT_DIR/lib/code-parser.js" "$CONTROLLER_DIR" 2>&1)
+    OUTPUT=$(python3 "$SCRIPT_DIR/lib/code-parser.py" "$CONTROLLER_DIR" 2>&1)
     CONTROLLERS=$(echo "$OUTPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d['controllers']))" 2>/dev/null || echo "0")
     if [ "$CONTROLLERS" -gt 0 ]; then
         pass "explain-flow found $CONTROLLERS controllers"
@@ -140,7 +140,7 @@ else
 fi
 
 echo -e "${BLUE}[explain-flow] Parse full repo (CRDs, webhooks, main)${NC}"
-OUTPUT=$(node "$SCRIPT_DIR/lib/code-parser.js" "$OPERATOR_DIR" 2>&1)
+OUTPUT=$(python3 "$SCRIPT_DIR/lib/code-parser.py" "$OPERATOR_DIR" 2>&1)
 CRDS=$(echo "$OUTPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d['crds']))" 2>/dev/null || echo "0")
 WEBHOOKS=$(echo "$OUTPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d['webhooks']))" 2>/dev/null || echo "0")
 MAIN=$(echo "$OUTPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print('yes' if d['main'] else 'no')" 2>/dev/null || echo "no")
@@ -158,7 +158,7 @@ I0324 10:15:34.345678 1 glance_controller.go:89] Reconciling Glance instance
 E0324 10:15:35.456789 1 glance_controller.go:120] Failed to create ConfigMap: permission denied
 I0324 10:15:37.678901 1 glance_controller.go:140] Successfully reconciled Glance'
 
-OUTPUT=$(echo "$SAMPLE_LOGS" | node "$SCRIPT_DIR/lib/log-analyzer.js" - 2>&1)
+OUTPUT=$(echo "$SAMPLE_LOGS" | python3 "$SCRIPT_DIR/lib/log-analyzer.py" - 2>&1)
 if echo "$OUTPUT" | grep -q "Log Analysis Summary"; then
     pass "analyze-logs stdin processing"
 else
@@ -174,7 +174,7 @@ fi
 echo -e "${BLUE}[analyze-logs] Analyze from file${NC}"
 LOGFILE="$TMPDIR/test.log"
 echo "$SAMPLE_LOGS" > "$LOGFILE"
-OUTPUT=$(node "$SCRIPT_DIR/lib/log-analyzer.js" "$LOGFILE" 2>&1)
+OUTPUT=$(python3 "$SCRIPT_DIR/lib/log-analyzer.py" "$LOGFILE" 2>&1)
 if echo "$OUTPUT" | grep -q "Log Analysis Summary"; then
     pass "analyze-logs file processing"
 else
@@ -182,7 +182,7 @@ else
 fi
 
 echo -e "${BLUE}[analyze-logs] JSON output${NC}"
-OUTPUT=$(echo "$SAMPLE_LOGS" | node "$SCRIPT_DIR/lib/log-analyzer.js" --json - 2>&1)
+OUTPUT=$(echo "$SAMPLE_LOGS" | python3 "$SCRIPT_DIR/lib/log-analyzer.py" --json - 2>&1)
 if echo "$OUTPUT" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
     pass "analyze-logs JSON output is valid"
 else
@@ -190,7 +190,7 @@ else
 fi
 
 echo -e "${BLUE}[analyze-logs] Pattern listing${NC}"
-if node "$SCRIPT_DIR/lib/log-analyzer.js" --patterns 2>&1 | grep -q "Error patterns\|error_patterns\|Available patterns"; then
+if python3 "$SCRIPT_DIR/lib/log-analyzer.py" --patterns 2>&1 | grep -q "Error patterns\|error_patterns\|Available patterns"; then
     pass "analyze-logs --patterns"
 else
     fail "analyze-logs --patterns"

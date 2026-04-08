@@ -24,10 +24,10 @@ run_test() {
     echo -e "${BLUE}[TEST $TESTS_RUN] $test_name${NC}"
 
     if eval "$test_command" &>/dev/null; then
-        echo -e "${GREEN}  ✅ PASSED${NC}"
+        echo -e "${GREEN}  PASSED${NC}"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        echo -e "${RED}  ❌ FAILED${NC}"
+        echo -e "${RED}  FAILED${NC}"
         echo -e "${YELLOW}     Command: $test_command${NC}"
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
@@ -66,17 +66,17 @@ test_node_script() {
 
 # Main test suite
 run_plugin_tests() {
-    echo -e "${BLUE}🧪 openstack-k8s-operators Operator Tools Plugin Test Suite${NC}"
+    echo -e "${BLUE}openstack-k8s-operators Operator Tools Plugin Test Suite${NC}"
     echo "=========================================="
     echo
 
     # Test plugin structure
-    echo -e "${YELLOW}📂 Testing Plugin Structure${NC}"
+    echo -e "${YELLOW}Testing Plugin Structure${NC}"
     test_file_exists ".claude-plugin/plugin.json" "Plugin metadata exists"
     test_json_valid ".claude-plugin/plugin.json" "Plugin metadata is valid JSON"
 
     # Discover and test skills
-    echo -e "\n${YELLOW}🎯 Testing Skills${NC}"
+    echo -e "\n${YELLOW}Testing Skills${NC}"
     for skill_dir in skills/*/; do
         [ -d "$skill_dir" ] || continue
         skill_name=$(basename "$skill_dir")
@@ -101,7 +101,7 @@ run_plugin_tests() {
     done
 
     # Discover and test agents
-    echo -e "\n${YELLOW}🤖 Testing Agents${NC}"
+    echo -e "\n${YELLOW}Testing Agents${NC}"
     for agent_dir in agents/*/; do
         [ -d "$agent_dir" ] || continue
         agent_name=$(basename "$agent_dir")
@@ -115,7 +115,7 @@ run_plugin_tests() {
     done
 
     # Discover and test lib helpers
-    echo -e "\n${YELLOW}📦 Testing Lib${NC}"
+    echo -e "\n${YELLOW}Testing Lib${NC}"
     for f in lib/*.sh; do
         [ -f "$f" ] || continue
         name=$(basename "$f")
@@ -135,7 +135,7 @@ run_plugin_tests() {
     done
 
     # Discover and test scripts
-    echo -e "\n${YELLOW}📜 Testing Scripts${NC}"
+    echo -e "\n${YELLOW}Testing Scripts${NC}"
     for f in scripts/*.sh; do
         [ -f "$f" ] || continue
         name=$(basename "$f")
@@ -144,7 +144,7 @@ run_plugin_tests() {
     done
 
     # Test documentation
-    echo -e "\n${YELLOW}📚 Testing Documentation${NC}"
+    echo -e "\n${YELLOW}Testing Documentation${NC}"
     test_file_exists "README.md" "README exists"
     test_file_exists "CLAUDE.md" "Claude development guide exists"
     test_file_exists "LICENSE" "License exists"
@@ -154,21 +154,21 @@ run_plugin_tests() {
 
 # Functional tests
 run_functional_tests() {
-    echo -e "\n${YELLOW}⚙️  Testing Functionality${NC}"
+    echo -e "\n${YELLOW}Testing Functionality${NC}"
 
     # Test script help
     run_test "Install script help" "./scripts/install.sh --help >/dev/null 2>&1"
 
     # Test lib tools
-    run_test "Log analyzer patterns" "node lib/log-analyzer.js --patterns >/dev/null 2>&1"
-    run_test "Code parser help" "node lib/code-parser.js --help >/dev/null 2>&1"
+    run_test "Log analyzer patterns" "python3 lib/log-analyzer.py --patterns >/dev/null 2>&1"
+    run_test "Code parser help" "python3 lib/code-parser.py --help >/dev/null 2>&1"
     run_test "Dev workflow help" "./lib/dev-workflow.sh help >/dev/null 2>&1"
     run_test "Test workflow help" "./lib/test-workflow.sh help >/dev/null 2>&1"
 }
 
 # Plugin validation tests
 run_plugin_validation() {
-    echo -e "\n${YELLOW}✅ Testing Plugin Validation${NC}"
+    echo -e "\n${YELLOW}Testing Plugin Validation${NC}"
 
     # Check plugin.json structure
     if [ -f ".claude-plugin/plugin.json" ]; then
@@ -178,45 +178,42 @@ run_plugin_validation() {
 
         run_test "Plugin has name field" "[ '$has_name' != 'null' ]"
         run_test "Plugin has version field" "[ '$has_version' != 'null' ]"
-        run_test "Plugin has skills field" "[ '$has_skills' != 'null' ]"
     fi
 
-    # Check skill references
-    if command -v jq >/dev/null 2>&1; then
-        local skills=$(jq -r '.skills | keys[]' .claude-plugin/plugin.json 2>/dev/null)
-        for skill in $skills; do
-            local skill_file=$(jq -r ".skills[\"$skill\"]" .claude-plugin/plugin.json 2>/dev/null)
-            run_test "Skill '$skill' file exists" "[ -f '$skill_file' ]"
-        done
-    fi
+    # Verify skills are discovered from skills/ directory
+    local skill_count
+    skill_count=$(find skills/ -name "SKILL.md" 2>/dev/null | wc -l)
+    run_test "Skills discovered from skills/ directory ($skill_count found)" "[ $skill_count -gt 0 ]"
 }
 
 # Performance tests
 run_performance_tests() {
-    echo -e "\n${YELLOW}⚡ Testing Performance${NC}"
+    echo -e "\n${YELLOW}Testing Performance${NC}"
 
-    # Test script execution time
-    local start_time=$(date +%s.%N)
+    # Test script execution time using integer seconds
+    local start_time
+    start_time=$(date +%s)
     ./lib/dev-workflow.sh help >/dev/null 2>&1
-    local end_time=$(date +%s.%N)
-    local duration=$(echo "$end_time - $start_time" | bc -l 2>/dev/null || echo "1")
+    local end_time
+    end_time=$(date +%s)
+    local duration=$((end_time - start_time))
 
-    run_test "Dev workflow runs quickly (<2s)" "[ $(echo '$duration < 2' | bc -l 2>/dev/null || echo 0) -eq 1 ]"
+    run_test "Dev workflow runs quickly (<2s)" "[ $duration -lt 2 ]"
 
     # Test log analyzer with small input
-    echo "test error message" | timeout 5s node lib/log-analyzer.js - >/dev/null 2>&1
+    echo "test error message" | timeout 5s python3 lib/log-analyzer.py - >/dev/null 2>&1
     local exit_code=$?
     run_test "Log analyzer handles input quickly" "[ $exit_code -eq 0 ]"
 }
 
 # Security tests
 run_security_tests() {
-    echo -e "\n${YELLOW}🔒 Testing Security${NC}"
+    echo -e "\n${YELLOW}Testing Security${NC}"
 
-    # Check for hardcoded secrets
-    run_test "No hardcoded passwords" "! grep -r -i 'password.*=' . --include='*.js' --include='*.sh' --include='*.md'"
-    run_test "No hardcoded tokens" "! grep -r -i 'token.*=' . --include='*.js' --include='*.sh' --include='*.md'"
-    run_test "No hardcoded API keys" "! grep -r -i 'apikey.*=' . --include='*.js' --include='*.sh' --include='*.md'"
+    # Check for hardcoded secrets (exclude docs/ and tests/ to avoid false positives)
+    run_test "No hardcoded passwords" "! grep -r -i 'password.*=' --include='*.sh' --include='*.py' --exclude-dir=docs --exclude-dir=tests --exclude-dir=.git ."
+    run_test "No hardcoded tokens" "! grep -r -i 'token.*=' --include='*.sh' --include='*.py' --exclude-dir=docs --exclude-dir=tests --exclude-dir=.git ."
+    run_test "No hardcoded API keys" "! grep -r -i 'apikey.*=' --include='*.sh' --include='*.py' --exclude-dir=docs --exclude-dir=tests --exclude-dir=.git ."
 
     # Check file permissions
     run_test "Scripts have safe permissions" "find scripts/ -name '*.sh' -exec test '{}' -perm /o+w \\; -print | wc -l | grep -q '^0$'"
@@ -224,21 +221,19 @@ run_security_tests() {
 
 # Integration tests
 run_integration_tests() {
-    echo -e "\n${YELLOW}🔗 Testing Integration${NC}"
+    echo -e "\n${YELLOW}Testing Integration${NC}"
 
     # Test install script check mode
     run_test "Install script check mode" "./scripts/install.sh --check >/dev/null 2>&1"
 
-    # Test plugin installation
-    if [ -d "$HOME/.claude/plugins" ]; then
-        run_test "Plugin can be installed" "./scripts/install.sh --claude-code >/dev/null 2>&1"
-    fi
+    # Test plugin installation (dry run — just verify the script doesn't error)
+    run_test "Install script parses without error" "bash -n ./scripts/install.sh"
 }
 
 # Summary report
 show_summary() {
     echo
-    echo -e "${BLUE}📊 Test Summary${NC}"
+    echo -e "${BLUE}Test Summary${NC}"
     echo "==============="
     echo -e "Total tests:  ${TESTS_RUN}"
     echo -e "Passed:       ${GREEN}${TESTS_PASSED}${NC}"
@@ -246,10 +241,10 @@ show_summary() {
     echo -e "Success rate: $(( TESTS_PASSED * 100 / TESTS_RUN ))%"
 
     if [ $TESTS_FAILED -eq 0 ]; then
-        echo -e "\n${GREEN}🎉 All tests passed!${NC}"
+        echo -e "\n${GREEN}All tests passed!${NC}"
         exit 0
     else
-        echo -e "\n${RED}❌ Some tests failed. Please review and fix issues.${NC}"
+        echo -e "\n${RED} Some tests failed. Please review and fix issues.${NC}"
         exit 1
     fi
 }

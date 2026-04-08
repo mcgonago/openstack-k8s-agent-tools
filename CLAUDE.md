@@ -33,9 +33,9 @@ openstack-k8s-agent-tools/
 │   ├── dev-workflow.sh      # Development workflow automation
 │   ├── test-workflow.sh     # Testing workflow automation
 │   ├── debug-helpers.sh     # Debug utility functions
-│   ├── style-analyzer.js    # Go code style analysis
-│   ├── code-parser.js       # Operator code flow parser
-│   ├── log-analyzer.js      # Log pattern analysis
+│   ├── style-analyzer.py    # Go code style analysis
+│   ├── code-parser.py       # Operator code flow parser
+│   ├── log-analyzer.py      # Log pattern analysis
 │   └── log-patterns.json    # Log pattern definitions
 └── scripts/                 # Utility scripts
     └── install.sh           # Cross-platform installer
@@ -155,7 +155,7 @@ cd /path/to/operator
 ./lib/dev-workflow.sh focus_test "Checks the Topology"
 
 # Test code style analysis
-node ./lib/style-analyzer.js controllers/controller.go
+python3 ./lib/style-analyzer.py controllers/controller.go
 
 # Test in Claude Code
 claude

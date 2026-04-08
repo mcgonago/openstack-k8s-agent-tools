@@ -49,17 +49,17 @@ The skill includes comprehensive patterns for:
 
 ## Log Analyzer Tool
 
-Includes specialized analyzer (`log-analyzer.js`) that:
+Includes specialized analyzer (`log-analyzer.py`) that:
 
 ```bash
 # Analyze log file with detailed output
-node ./lib/log-analyzer.js --verbose operator.log
+python3 ./lib/log-analyzer.py --verbose operator.log
 
 # JSON output for integration
-node ./lib/log-analyzer.js --json operator.log
+python3 ./lib/log-analyzer.py --json operator.log
 
 # Show available patterns
-node ./lib/log-analyzer.js --patterns
+python3 ./lib/log-analyzer.py --patterns
 ```
 
 ## Analysis Output
@@ -98,7 +98,7 @@ node ./lib/log-analyzer.js --patterns
 
 ```bash
 # Stream and analyze live logs
-kubectl logs -f deployment/operator-name | node log-analyzer.js -
+kubectl logs -f deployment/operator-name | python3 log-analyzer.py -
 ```
 
 ### 2. **Historical Analysis**
@@ -106,7 +106,7 @@ kubectl logs -f deployment/operator-name | node log-analyzer.js -
 ```bash
 # Analyze collected logs
 kubectl logs deployment/operator-name --since=1h > operator.log
-node log-analyzer.js --verbose operator.log
+python3 log-analyzer.py --verbose operator.log
 ```
 
 ### 3. **Multi-Pod Analysis**
@@ -114,14 +114,14 @@ node log-analyzer.js --verbose operator.log
 ```bash
 # Analyze logs from all operator pods
 kubectl logs -l app=operator --all-containers=true > combined.log
-node log-analyzer.js combined.log
+python3 log-analyzer.py combined.log
 ```
 
 ### 4. **Pattern-Specific Search**
 
 ```bash
 # Focus on specific issue types
-grep -E "(error|panic|failed)" operator.log | node log-analyzer.js -
+grep -E "(error|panic|failed)" operator.log | python3 log-analyzer.py -
 ```
 
 ## Integration Points

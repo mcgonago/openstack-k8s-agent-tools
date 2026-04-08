@@ -152,7 +152,7 @@ This installs:
 ```bash
 # Fast iteration cycle
 ./test-workflow.sh quick
-# Output shows: fmt ✓ vet ✓ tidy ✓
+# Output shows: fmt OK vet OK tidy OK
 ```
 
 ### Focused Test Development

@@ -22,7 +22,7 @@ When explaining code flow, I will:
 
 ## Code Parser Features
 
-The skill includes a specialized parser (`code-parser.js`) that analyzes:
+The skill includes a specialized parser (`code-parser.py`) that analyzes:
 
 - **Controllers**: Reconcile functions and SetupWithManager
 - **Flow Steps**: Resource operations (Get, Create, Update, Delete)
@@ -38,7 +38,7 @@ The skill includes a specialized parser (`code-parser.js`) that analyzes:
 
 ```bash
 # Analyze specific controller
-node ./lib/code-parser.js /path/to/operator
+python3 ./lib/code-parser.py /path/to/operator
 
 # Focus on reconcile functions
 grep -r "func.*Reconcile" --include="*.go" .

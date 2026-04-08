@@ -13,65 +13,65 @@ NC='\033[0m'
 # Check if we're in an operator directory
 check_operator_directory() {
     if [ ! -f "Makefile" ] || [ ! -f "go.mod" ]; then
-        echo -e "${RED}❌ Not in an operator directory${NC}"
+        echo -e "${RED}Not in an operator directory${NC}"
         echo "Please run this from an operator root directory (with Makefile and go.mod)"
         return 1
     fi
 
     local operator_name=$(basename "$(pwd)")
-    echo -e "${GREEN}✅ Detected operator: $operator_name${NC}"
+    echo -e "${GREEN}Detected operator: $operator_name${NC}"
     return 0
 }
 
 # Run pre-commit checks
 run_precommit_checks() {
-    echo -e "${BLUE}🔍 Running pre-commit syntax checks${NC}"
+    echo -e "${BLUE}Running pre-commit syntax checks${NC}"
     echo "=================================="
 
     if ! command -v pre-commit &> /dev/null; then
-        echo -e "${YELLOW}⚠️  pre-commit not installed, skipping${NC}"
+        echo -e "${YELLOW}pre-commit not installed, skipping${NC}"
         return 0
     fi
 
     echo "Running pre-commit on all files..."
     if pre-commit run --all-files; then
-        echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
+        echo -e "${GREEN}Pre-commit checks passed${NC}"
         return 0
     else
-        echo -e "${RED}❌ Pre-commit checks failed${NC}"
-        echo -e "${YELLOW}💡 Fix syntax issues and run again${NC}"
+        echo -e "${RED}Pre-commit checks failed${NC}"
+        echo -e "${YELLOW}Fix syntax issues and run again${NC}"
         return 1
     fi
 }
 
 # Generate manifests and code
 generate_manifests() {
-    echo -e "\n${BLUE}📋 Generating manifests and code${NC}"
+    echo -e "\n${BLUE}Generating manifests and code${NC}"
     echo "================================="
 
     echo "Running 'make manifests'..."
     if make manifests; then
-        echo -e "${GREEN}✅ Manifests generated successfully${NC}"
+        echo -e "${GREEN}Manifests generated successfully${NC}"
     else
-        echo -e "${RED}❌ Failed to generate manifests${NC}"
+        echo -e "${RED}Failed to generate manifests${NC}"
         return 1
     fi
 
     echo "Running 'make generate'..."
     if make generate; then
-        echo -e "${GREEN}✅ Code generated successfully${NC}"
+        echo -e "${GREEN}Code generated successfully${NC}"
     else
-        echo -e "${RED}❌ Failed to generate code${NC}"
+        echo -e "${RED}Failed to generate code${NC}"
         return 1
     fi
 
     # Check for changes
     if git diff --quiet; then
-        echo -e "${GREEN}✅ No changes in generated files${NC}"
+        echo -e "${GREEN}No changes in generated files${NC}"
     else
-        echo -e "${YELLOW}⚠️  Generated files have changes:${NC}"
+        echo -e "${YELLOW}Generated files have changes:${NC}"
         git diff --name-only
-        echo -e "${YELLOW}💡 Review and commit these changes${NC}"
+        echo -e "${YELLOW}Review and commit these changes${NC}"
     fi
 
     return 0
@@ -82,7 +82,7 @@ run_operator_tests() {
     local focus_pattern="$1"
     local verbose="${2:-false}"
 
-    echo -e "\n${BLUE}🧪 Running operator tests${NC}"
+    echo -e "\n${BLUE}Running operator tests${NC}"
     echo "========================="
 
     if [ -n "$focus_pattern" ]; then
@@ -93,20 +93,20 @@ run_operator_tests() {
         fi
 
         if make test GINKGO_ARGS="$ginkgo_args"; then
-            echo -e "${GREEN}✅ Focused tests passed${NC}"
+            echo -e "${GREEN}Focused tests passed${NC}"
             return 0
         else
-            echo -e "${RED}❌ Focused tests failed${NC}"
+            echo -e "${RED}Focused tests failed${NC}"
             return 1
         fi
     else
         echo "Running all tests..."
         if make test; then
-            echo -e "${GREEN}✅ All tests passed${NC}"
+            echo -e "${GREEN}All tests passed${NC}"
             return 0
         else
-            echo -e "${RED}❌ Tests failed${NC}"
-            echo -e "${YELLOW}💡 Use focus_test '<pattern>' to run specific tests${NC}"
+            echo -e "${RED}Tests failed${NC}"
+            echo -e "${YELLOW}Use focus_test '<pattern>' to run specific tests${NC}"
             return 1
         fi
     fi
@@ -127,17 +127,17 @@ focus_test() {
 
 # Check test coverage
 check_test_coverage() {
-    echo -e "\n${BLUE}📊 Checking test coverage${NC}"
+    echo -e "\n${BLUE}Checking test coverage${NC}"
     echo "=========================="
 
     if make test-coverage 2>/dev/null; then
-        echo -e "${GREEN}✅ Coverage report generated${NC}"
+        echo -e "${GREEN}Coverage report generated${NC}"
         if [ -f "cover.out" ]; then
             echo "Coverage details available in cover.out"
             go tool cover -func=cover.out | tail -1
         fi
     else
-        echo -e "${YELLOW}⚠️  Coverage target not available${NC}"
+        echo -e "${YELLOW}Coverage target not available${NC}"
         echo "Running basic test with coverage..."
         go test -coverprofile=cover.out ./... 2>/dev/null || echo "Coverage collection failed"
     fi
@@ -145,44 +145,44 @@ check_test_coverage() {
 
 # Lint code
 run_linting() {
-    echo -e "\n${BLUE}🔍 Running code linting${NC}"
+    echo -e "\n${BLUE}Running code linting${NC}"
     echo "======================"
 
     # Check if golangci-lint is available
     if command -v golangci-lint &> /dev/null; then
         echo "Running golangci-lint..."
         if golangci-lint run; then
-            echo -e "${GREEN}✅ Linting passed${NC}"
+            echo -e "${GREEN}Linting passed${NC}"
         else
-            echo -e "${YELLOW}⚠️  Linting issues found${NC}"
+            echo -e "${YELLOW}Linting issues found${NC}"
         fi
     elif make lint 2>/dev/null; then
         echo "Running make lint..."
-        echo -e "${GREEN}✅ Linting completed${NC}"
+        echo -e "${GREEN}Linting completed${NC}"
     else
-        echo -e "${YELLOW}⚠️  No linting tool available${NC}"
+        echo -e "${YELLOW}No linting tool available${NC}"
     fi
 }
 
 # Check Go modules
 check_go_modules() {
-    echo -e "\n${BLUE}📦 Checking Go modules${NC}"
+    echo -e "\n${BLUE}Checking Go modules${NC}"
     echo "======================"
 
     echo "Verifying go.mod and go.sum..."
     if go mod verify; then
-        echo -e "${GREEN}✅ Go modules verified${NC}"
+        echo -e "${GREEN}Go modules verified${NC}"
     else
-        echo -e "${RED}❌ Go modules verification failed${NC}"
+        echo -e "${RED}Go modules verification failed${NC}"
         return 1
     fi
 
     echo "Checking for unused dependencies..."
     if go mod tidy; then
         if git diff --quiet go.mod go.sum; then
-            echo -e "${GREEN}✅ Dependencies are clean${NC}"
+            echo -e "${GREEN}Dependencies are clean${NC}"
         else
-            echo -e "${YELLOW}⚠️  Dependencies need tidying:${NC}"
+            echo -e "${YELLOW}Dependencies need tidying:${NC}"
             git diff go.mod go.sum
         fi
     fi
@@ -190,14 +190,14 @@ check_go_modules() {
 
 # Check operator build
 check_build() {
-    echo -e "\n${BLUE}🔨 Checking operator build${NC}"
+    echo -e "\n${BLUE}Checking operator build${NC}"
     echo "=========================="
 
     echo "Building operator binary..."
     if make build 2>/dev/null || go build -o bin/manager cmd/main.go; then
-        echo -e "${GREEN}✅ Operator builds successfully${NC}"
+        echo -e "${GREEN}Operator builds successfully${NC}"
     else
-        echo -e "${RED}❌ Build failed${NC}"
+        echo -e "${RED}Build failed${NC}"
         return 1
     fi
 
@@ -205,16 +205,16 @@ check_build() {
     if [ -f "Dockerfile" ]; then
         echo "Checking Dockerfile..."
         if make docker-build IMG=test:latest 2>/dev/null; then
-            echo -e "${GREEN}✅ Docker image builds successfully${NC}"
+            echo -e "${GREEN}Docker image builds successfully${NC}"
         else
-            echo -e "${YELLOW}⚠️  Docker build issues (may be expected)${NC}"
+            echo -e "${YELLOW}Docker build issues (may be expected)${NC}"
         fi
     fi
 }
 
 # Validate CRDs
 validate_crds() {
-    echo -e "\n${BLUE}📜 Validating CRDs${NC}"
+    echo -e "\n${BLUE}Validating CRDs${NC}"
     echo "=================="
 
     local crd_dir="config/crd/bases"
@@ -227,20 +227,20 @@ validate_crds() {
         for crd_file in "$crd_dir"/*.yaml; do
             if [ -f "$crd_file" ]; then
                 if yq eval '.' "$crd_file" >/dev/null 2>&1; then
-                    echo -e "${GREEN}✅ $(basename "$crd_file") is valid${NC}"
+                    echo -e "${GREEN}$(basename "$crd_file") is valid${NC}"
                 else
-                    echo -e "${RED}❌ $(basename "$crd_file") has YAML errors${NC}"
+                    echo -e "${RED}$(basename "$crd_file") has YAML errors${NC}"
                 fi
             fi
         done
     else
-        echo -e "${YELLOW}⚠️  No CRD directory found at $crd_dir${NC}"
+        echo -e "${YELLOW}No CRD directory found at $crd_dir${NC}"
     fi
 }
 
 # Run full development workflow
 run_full_workflow() {
-    echo -e "${BLUE}🔄 Running full openstack-k8s-operators development workflow${NC}"
+    echo -e "${BLUE}Running full openstack-k8s-operators development workflow${NC}"
     echo "==========================================="
 
     check_operator_directory || return 1
@@ -282,40 +282,40 @@ run_full_workflow() {
     check_test_coverage
 
     # Summary
-    echo -e "\n${BLUE}📋 Workflow Summary${NC}"
+    echo -e "\n${BLUE}Workflow Summary${NC}"
     echo "==================="
 
     if [ ${#failed_steps[@]} -eq 0 ]; then
-        echo -e "${GREEN}🎉 All development workflow steps passed!${NC}"
-        echo -e "${GREEN}✅ Operator is ready for development/deployment${NC}"
+        echo -e "${GREEN}All development workflow steps passed!${NC}"
+        echo -e "${GREEN}Operator is ready for development/deployment${NC}"
         return 0
     else
-        echo -e "${RED}❌ Failed steps: ${failed_steps[*]}${NC}"
-        echo -e "${YELLOW}💡 Fix the failed steps and run again${NC}"
+        echo -e "${RED}Failed steps: ${failed_steps[*]}${NC}"
+        echo -e "${YELLOW}Fix the failed steps and run again${NC}"
         return 1
     fi
 }
 
 # Show available tests
 show_tests() {
-    echo -e "${BLUE}🧪 Available Tests${NC}"
+    echo -e "${BLUE}Available Tests${NC}"
     echo "=================="
 
     # Look for test files and extract test names
     echo "Scanning for test files..."
     find . -name "*_test.go" -exec grep -l "Describe\|Context\|It(" {} \; | while read -r file; do
-        echo -e "\n${YELLOW}📄 $file:${NC}"
+        echo -e "\n${YELLOW}$file:${NC}"
         grep -E "(Describe|Context|It)\(" "$file" | sed 's/.*[[:space:]]*\(Describe\|Context\|It\)("/  - /' | sed 's/",.*$//' | head -10
     done
 
-    echo -e "\n${BLUE}💡 Usage:${NC}"
+    echo -e "\n${BLUE}Usage:${NC}"
     echo "  focus_test 'partial test name'     - Run specific test"
     echo "  run_operator_tests                 - Run all tests"
 }
 
 # Help function
 show_dev_help() {
-    echo -e "${BLUE}🛠️  openstack-k8s-operators Development Workflow Commands${NC}"
+    echo -e "${BLUE}openstack-k8s-operators Development Workflow Commands${NC}"
     echo "======================================="
     echo
     echo "Development workflow:"
