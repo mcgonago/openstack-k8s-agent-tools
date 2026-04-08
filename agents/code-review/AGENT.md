@@ -215,6 +215,9 @@ Approve when: only Minor/Nit findings or no findings.
 - If a pattern deviates from conventions but is justified, note it as informational (`FYI:`), not as a finding.
 - When reviewing a PR, consider the full diff, not individual commits.
 - Technical facts override personal preferences. Style guides are the authority on style.
+- When dependency context is provided (Depends-On PRs, replace directives), do NOT flag usage of types, functions, or helpers that come from those dependencies as "missing" or "undefined." The dependency provides them.
+- If a replace directive points to a private branch with no corresponding open PR, flag it as `FYI:` — the author should ensure the dependency is merged before this PR lands.
+- Review replace directives: they should be temporary. Flag any that look stale or point to repos outside the openstack-k8s-operators organization.
 
 ## Reference
 

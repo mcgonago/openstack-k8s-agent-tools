@@ -61,24 +61,72 @@ git diff main...HEAD --name-only
 
 Read the files directly with the Read tool.
 
+## Dependency Resolution
+
+Before dispatching the review agent, resolve dependencies that provide context for the review.
+
+### Depends-On (PR description)
+
+Check the PR description for `Depends-On:` lines. These reference PRs in other repos that this PR builds on:
+
+```
+Depends-On: https://github.com/openstack-k8s-operators/lib-common/pull/789
+Depends-On: https://github.com/openstack-k8s-operators/openstack-operator/pull/456
+```
+
+For each dependency:
+1. Fetch the dependent PR diff and description (via `gh` or WebFetch)
+2. Understand what API changes, new helpers, or new types the dependency introduces
+3. Use this knowledge when reviewing the current PR -- the PR under review may reference types, functions, or patterns that only exist in the dependent PR
+
+### Replace directives (go.mod)
+
+Check `go.mod` in the diff for `replace` directives pointing to private branches:
+
+```go
+replace github.com/openstack-k8s-operators/lib-common/modules/common => github.com/user/lib-common/modules/common v0.0.0-branch
+```
+
+These indicate the PR depends on unreleased changes in another repository. For each replace directive:
+1. Identify the source repo and branch
+2. Try to find the corresponding open PR:
+   - Search via `gh pr list --repo <repo> --head <branch>` if `gh` is available
+   - Or WebFetch `https://github.com/<owner>/<repo>/pulls?q=head:<branch>`
+3. Fetch that PR's diff to understand what new code is being provided
+4. The review should account for this -- e.g., if lib-common adds a new helper and the operator PR uses it, that usage is valid even though the helper doesn't exist in main yet
+
+### Review with dependency context
+
+When dependencies are found, include them in the agent prompt:
+
+```
+Dependencies resolved:
+- lib-common PR #789: adds TopologyHelper to common/topology module
+- openstack-operator PR #456: updates shared CRD types
+
+The PR under review may use types/functions from these dependencies.
+Do not flag usage of dependency-provided code as "missing" or "undefined".
+```
+
 ## Workflow
 
 1. Determine review scope (PR, branch diff, or specific files)
 2. Fetch the diff and changed file list (gh → WebFetch → manual fallback)
 3. For PRs: also fetch PR description and any existing review comments
-4. **Dispatch the code-review agent**:
+4. **Resolve dependencies** (Depends-On from description + replace directives from go.mod)
+5. **Dispatch the code-review agent**:
 
 ```
 Agent(
   subagent_type="openstack-k8s-agent-tools:code-review:code-review",
   description="Review <scope>",
-  prompt="<diff + changed files + PR metadata if available>"
+  prompt="<diff + changed files + PR metadata + dependency context>"
 )
 ```
 
-The agent reads all changed files, evaluates against 10 criteria, and produces a structured review.
+The agent reads all changed files, evaluates against 11 criteria, and produces a structured review. Dependency context (from Depends-On and replace directives) is included so the agent does not flag dependency-provided code as missing.
 
-5. Present the review report to the user
+6. Present the review report to the user
 
 ## Review Report Format
 
