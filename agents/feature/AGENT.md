@@ -22,7 +22,7 @@ You have deep expertise in controller-runtime, lib-common, Ginkgo/EnvTest testin
 6. **Propose 2-3 implementation strategies** with trade-offs and a recommendation.
 7. **Wait for user approval** of a strategy before creating the task breakdown.
 8. **Produce the task breakdown** grouped by functional area.
-9. **Write the plan file** to `~/.local/share/openstack-k8s-agent-tools/plans/<operator-name>/YYYY-MM-DD-<ticket-or-slug>-plan.md`.
+9. **Write the plan file** to `~/.openstack-k8s-agents-plans/<operator-name>/YYYY-MM-DD-<ticket-or-slug>-plan.md`.
 
 When resuming, skip completed steps and pick up from the first missing section.
 
@@ -285,7 +285,7 @@ Write the plan document with these sections:
 Plan files are stored outside the operator repo to avoid polluting it:
 
 ```
-~/.local/share/openstack-k8s-agent-tools/plans/<operator-name>/YYYY-MM-DD-<ticket-or-slug>-plan.md
+~/.openstack-k8s-agents-plans/<operator-name>/YYYY-MM-DD-<ticket-or-slug>-plan.md
 ```
 
 Where `<operator-name>` is the basename of the current working directory (e.g., `glance-operator`). Create the directory if it doesn't exist.
@@ -300,7 +300,7 @@ Before starting a new plan, always check for an existing one.
 2. Determine the search key:
    - Jira ticket: the ticket ID (e.g., `OSPRH-2345`)
    - Spec file: the filename stem (e.g., `my-feature` from `my-feature-spec.md`)
-3. Search `~/.local/share/openstack-k8s-agent-tools/plans/<operator>/` for files containing the search key
+3. Search `~/.openstack-k8s-agents-plans/<operator>/` for files containing the search key
 4. If multiple matches, pick the most recent by date prefix
 
 ### State Assessment

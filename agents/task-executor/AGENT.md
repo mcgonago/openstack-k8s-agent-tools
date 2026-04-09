@@ -320,7 +320,7 @@ NEVER run `git commit` without both `-s` (Signed-off-by) and `-S` (GPG/SSH signa
 ### Plan Update
 
 After the commit is approved:
-1. Update the plan file at `~/.local/share/openstack-k8s-agent-tools/plans/<operator>/`
+1. Update the plan file at `~/.openstack-k8s-agents-plans/<operator>/`
 2. Mark all completed tasks as `[x]`
 3. Add an **Outcome** section at the end of the plan file:
 
