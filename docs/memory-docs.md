@@ -159,6 +159,7 @@ Tracks active work across sessions and instances. Enables dependency resolution 
       "task": "2.1",
       "worktree": ".worktrees/OSPRH-2345",
       "branch": "feature/OSPRH-2345",
+      "session": "abc123-def456",
       "started": "2026-04-11T10:30:00Z"
     }
   ],
@@ -166,7 +167,8 @@ Tracks active work across sessions and instances. Enables dependency resolution 
     {
       "plan": "2026-04-10-OSPRH-1000-plan.md",
       "completed": "2026-04-10T18:00:00Z",
-      "commit": "abc1234"
+      "commit": "abc1234",
+      "session": "xyz789-ghi012"
     }
   ],
   "discoveries": [
@@ -174,6 +176,8 @@ Tracks active work across sessions and instances. Enables dependency resolution 
   ]
 }
 ```
+
+The `session` field stores `$CLAUDE_SESSION_ID` to identify which Claude Code instance owns a task. This enables conflict detection when multiple instances run concurrently.
 
 ## Worktree Isolation
 

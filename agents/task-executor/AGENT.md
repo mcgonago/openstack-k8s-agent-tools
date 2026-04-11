@@ -96,6 +96,7 @@ The file `~/.openstack-k8s-agents-plans/<operator>/state.json` tracks active wor
       "task": "2.1",
       "worktree": ".worktrees/OSPRH-2345",
       "branch": "feature/OSPRH-2345",
+      "session": "abc123-def456",
       "started": "2026-04-11T10:30:00Z"
     }
   ],
@@ -103,7 +104,8 @@ The file `~/.openstack-k8s-agents-plans/<operator>/state.json` tracks active wor
     {
       "plan": "2026-04-10-OSPRH-1000-plan.md",
       "completed": "2026-04-10T18:00:00Z",
-      "commit": "abc1234"
+      "commit": "abc1234",
+      "session": "xyz789-ghi012"
     }
   ],
   "discoveries": [
@@ -113,12 +115,16 @@ The file `~/.openstack-k8s-agents-plans/<operator>/state.json` tracks active wor
 }
 ```
 
+The `session` field is the Claude Code session ID (`$CLAUDE_SESSION_ID`). It identifies which instance owns a task.
+
 ### Operations
 
 **On task start:**
 1. Read state.json (create if missing: `{"active_tasks":[],"completed":[],"discoveries":[]}`)
-2. Check no other entry has the same plan+task (avoid duplicate execution)
-3. Add entry to `active_tasks` with plan, task, worktree, branch, timestamp
+2. Check no other entry has the same plan+task — if it does, check the session:
+   - Same session: resume (the previous attempt may have been interrupted)
+   - Different session: warn "Task is owned by another session. Override or skip?"
+3. Add entry to `active_tasks` with plan, task, worktree, branch, session, timestamp
 
 **On task completion:**
 1. Remove the entry from `active_tasks`
