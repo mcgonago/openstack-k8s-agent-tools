@@ -12,12 +12,15 @@ You are an implementation executor for openstack-k8s-operators operators. You fo
 
 ## Execution Process
 
-1. **Load the plan file** and validate its structure.
-2. **Detect current progress** — find the first uncompleted task.
-3. **Show progress summary** to the user.
-4. **Execute tasks sequentially** — never skip ahead.
-5. **Checkpoint after each task** — update the plan file on disk.
-6. **Pause at group boundaries** — ask the user to review before proceeding.
+1. **Read shared memory** — load `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md` for prior context.
+2. **Load the plan file** and validate its structure.
+3. **Detect current progress** — find the first uncompleted task.
+4. **Check dependencies** — verify all dependencies are met before starting each task.
+5. **Show progress summary** to the user.
+6. **Execute tasks sequentially** — never skip ahead unless blocked by dependencies.
+7. **Checkpoint after each task** — update the plan file and state.json on disk.
+8. **Pause at group boundaries** — ask the user to review before proceeding.
+9. **Update shared memory** — write discoveries, decisions, and completion status to MEMORY.md.
 
 ## 1. Plan Loading & Validation
 
@@ -52,6 +55,32 @@ Next: Task 2.1 — Implement reconciliation for new field
 Group: Controller Logic
 Dependencies: Task 1.1, Task 1.2 (both completed)
 ```
+
+## 1b. Shared Project Memory
+
+### Reading (at session start)
+
+Before executing any task, read `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md` if it exists. This provides:
+- **Active Work** — what other plans/instances are working on (avoid conflicts)
+- **Discoveries** — prior knowledge about lib-common helpers, peer patterns, conventions
+- **Decisions** — architectural choices already made for this operator
+- **Blockers** — known issues that may affect execution
+
+Use this context throughout execution. If MEMORY.md says "lib-common has TopologyHelper," don't search for it again.
+
+### Writing (during and after execution)
+
+Update MEMORY.md at these points:
+- **After discovering something new** during implementation (a helper, a pattern, a gotcha)
+- **After completing a task group** — update Active Work status
+- **After plan completion** — move the plan entry from Active Work to completed, record any new discoveries
+
+### Conflict handling
+
+If another instance is updating MEMORY.md simultaneously:
+- Read before writing
+- Append new entries, don't overwrite existing ones
+- If a discovery contradicts an existing entry, keep both and flag for user review
 
 ## 2. Execution Principles
 
@@ -354,6 +383,13 @@ If the plan was sourced from a Jira ticket, follow the `/jira` skill hierarchy r
 6. If MCP is not available, provide the comment text for the user to paste manually
 
 **Do NOT create sub-tasks.** If the user wants plan tasks tracked in Jira, suggest creating separate Stories under the same Epic.
+
+### Memory Update
+
+After plan completion (commit approved, outcome written), update `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md`:
+1. Move the plan entry in Active Work to show completion
+2. Add any new discoveries made during implementation
+3. Record any decisions that deviated from the original plan
 
 ## 9. Behavioral Rules
 

@@ -290,6 +290,47 @@ Plan files are stored outside the operator repo to avoid polluting it:
 
 Where `<operator-name>` is the basename of the current working directory (e.g., `glance-operator`). Create the directory if it doesn't exist.
 
+## 6b. Shared Project Memory
+
+After writing the plan, update the shared project memory at `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md`. This file persists across sessions and is read by all skills working on this operator.
+
+### On plan completion, update MEMORY.md with:
+
+1. **Active Work** — add an entry for the new plan (ticket, summary, status)
+2. **Discoveries** — anything learned during cross-repo analysis (lib-common helpers found, peer operator patterns, dev-docs conventions)
+3. **Decisions** — the selected strategy and rationale
+
+### MEMORY.md format:
+
+```markdown
+# <operator-name> Memory
+
+## Active Work
+- OSPRH-2345: Adding topology support (plan complete, strategy approved)
+- OSPRH-6789: Fix nil pointer on missing endpoint (in progress, Task 2.1)
+
+## Discoveries
+- lib-common common/topology has TopologyHelper — use it, don't reimplement
+- nova-operator implemented topology in PR #423 — follow same approach
+- EnvTest suite takes ~45s, kuttl not configured
+
+## Decisions
+- [2026-04-11] OSPRH-2345: follow nova-operator approach (Strategy A)
+- [2026-04-11] OSPRH-2345: TopologyRef as pointer field with omitempty
+
+## Blockers
+- (none currently)
+```
+
+### Reading MEMORY.md:
+
+At the START of every planning session, before any analysis:
+1. Read `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md` if it exists
+2. Use its content as prior context — avoid re-discovering what's already known
+3. If a discovery contradicts what's in MEMORY.md, update the file
+
+If MEMORY.md doesn't exist, create it after the first plan is written.
+
 ## 7. Resume Protocol
 
 Before starting a new plan, always check for an existing one.
