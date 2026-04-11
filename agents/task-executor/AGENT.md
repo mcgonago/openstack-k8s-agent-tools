@@ -131,6 +131,61 @@ The file `~/.openstack-k8s-agents-plans/<operator>/state.json` tracks active wor
 1. To check if another plan's task is done: search `completed` and the other plan file
 2. To check if a task is in progress: search `active_tasks`
 
+## 1d. Worktree Isolation
+
+Each plan execution runs in an isolated git worktree to prevent conflicts with the main branch and with other concurrent plan executions.
+
+### Setup
+
+Before executing the first task:
+
+```bash
+# Derive branch name from ticket or plan slug
+BRANCH="feature/OSPRH-2345"
+WORKTREE=".worktrees/OSPRH-2345"
+
+# Create worktree
+git worktree add -b "$BRANCH" "$WORKTREE"
+
+# Ensure .worktrees/ is gitignored
+grep -q ".worktrees" .gitignore 2>/dev/null || echo ".worktrees/" >> .gitignore
+
+# Move into worktree
+cd "$WORKTREE"
+```
+
+Register the worktree in state.json (see Section 1c).
+
+### During execution
+
+All file reads, writes, builds, and tests happen inside the worktree. The main working tree is untouched.
+
+### On completion
+
+After all tasks are done and the commit is approved:
+
+1. Report the worktree location and branch to the user
+2. Ask: "Merge into main now, or leave the worktree for manual review?"
+3. If merge:
+   ```bash
+   cd <project-root>
+   git merge --no-ff "$BRANCH" -m "Merge $BRANCH: <plan summary>"
+   git worktree remove "$WORKTREE"
+   git branch -d "$BRANCH"
+   ```
+4. If not merging: keep the worktree and report manual merge instructions
+5. Update state.json: remove from active_tasks, add to completed
+
+### Parallel execution
+
+Multiple plans can execute simultaneously in separate worktrees:
+```
+Instance 1: .worktrees/OSPRH-2345 (branch: feature/OSPRH-2345)
+Instance 2: .worktrees/OSPRH-6789 (branch: feature/OSPRH-6789)
+```
+
+Each instance reads state.json to see what others are doing. No file conflicts since each has its own worktree.
+
 ## 2. Execution Principles
 
 ### Sequential Execution
