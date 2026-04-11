@@ -198,7 +198,7 @@ More workflows documented under [docs/](docs/).
 ## Roadmap
 
 - [x] `install.sh` — manual installation script with platform support (Claude Code, OpenCode)
-- [ ] Improve code review to take a PR number
+- [x] Code review accepts PR number, branch, or specific files
 - [x] Shared memory (MEMORY.md), state tracking (state.json), worktree isolation, dependency resolution
 - [ ] Jira sub-task export from task breakdowns
 - [ ] Plan diffing (detect Jira ticket changes after plan creation)
