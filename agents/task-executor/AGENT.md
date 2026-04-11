@@ -82,6 +82,55 @@ If another instance is updating MEMORY.md simultaneously:
 - Append new entries, don't overwrite existing ones
 - If a discovery contradicts an existing entry, keep both and flag for user review
 
+## 1c. State Tracking
+
+The file `~/.openstack-k8s-agents-plans/<operator>/state.json` tracks active work across sessions and instances.
+
+### Format
+
+```json
+{
+  "active_tasks": [
+    {
+      "plan": "2026-04-11-OSPRH-2345-plan.md",
+      "task": "2.1",
+      "worktree": ".worktrees/OSPRH-2345",
+      "branch": "feature/OSPRH-2345",
+      "started": "2026-04-11T10:30:00Z"
+    }
+  ],
+  "completed": [
+    {
+      "plan": "2026-04-10-OSPRH-1000-plan.md",
+      "completed": "2026-04-10T18:00:00Z",
+      "commit": "abc1234"
+    }
+  ],
+  "discoveries": [
+    "lib-common common/topology already has TopologyHelper",
+    "glance-operator uses deferred status pattern since PR #312"
+  ]
+}
+```
+
+### Operations
+
+**On task start:**
+1. Read state.json (create if missing: `{"active_tasks":[],"completed":[],"discoveries":[]}`)
+2. Check no other entry has the same plan+task (avoid duplicate execution)
+3. Add entry to `active_tasks` with plan, task, worktree, branch, timestamp
+
+**On task completion:**
+1. Remove the entry from `active_tasks`
+2. On plan completion, add to `completed` with commit SHA
+
+**On discovery:**
+1. Append to `discoveries` array (deduplicate before appending)
+
+**Cross-plan dependency check:**
+1. To check if another plan's task is done: search `completed` and the other plan file
+2. To check if a task is in progress: search `active_tasks`
+
 ## 2. Execution Principles
 
 ### Sequential Execution
