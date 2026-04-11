@@ -15,10 +15,12 @@ $ARGUMENTS
 ```
 
 The arguments may contain:
+
 - A **change request URL** (required). If not provided, ask for it before proceeding.
 - An optional **branch specifier** — either a branch name (e.g. `stable/2025.2`) or a release codename (e.g. `Flamingo`). When provided, use that branch for the upstream patch comparison instead of the oldest branch.
 
 Parse the arguments as follows:
+
 1. Extract the URL (the token starting with `http`).
 2. If any remaining token looks like a branch name (`stable/...`, `unmaintained/...`, `master`) or a single word that could be a codename, treat it as the branch specifier.
 3. If a **codename** is given (not a branch path), resolve it to a branch name by fetching `https://raw.githubusercontent.com/openstack/releases/refs/heads/master/data/series_status.yaml` and finding the entry whose `name` field matches the codename (case-insensitive). The corresponding `release-id` field gives the YYYY.N version; map it to `stable/<release-id>` (or `unmaintained/<release-id>` if the series status is `unmaintained`). If the codename cannot be resolved, report it to the user and halt.
@@ -27,6 +29,7 @@ Parse the arguments as follows:
 ## Goal
 
 Perform a structured backport review:
+
 1. Validate that the change request description contains at least one OSPRH Jira ticket reference.
 2. Validate that each commit has at least one `Upstream-<release>: <url>` line in the change request description.
 3. For each commit, use its `Change-Id` to locate the equivalent patch on upstream Gerrit (`review.opendev.org`), select the oldest upstream branch that carries that Change-Id, fetch both patches as `.patch` files, and compare them.
@@ -90,6 +93,7 @@ curl -sL "{change_request_url}" | grep -oP '(OSPRH|OSPCIX)-[0-9]+' | sort -u
 The combined set of `Upstream-*` lines from the `.patch` file and from `${WORKDIR}/mr_upstream_refs.txt` forms the complete upstream refs list. Deduplicate by URL.
 
 Build a per-commit record:
+
 ```
 commit_N:
   subject: <first line of commit message>
@@ -97,6 +101,7 @@ commit_N:
 ```
 
 And a global upstream refs list:
+
 ```
 upstream_refs:
   - release: master|<year.seq>|<codename>
@@ -119,6 +124,7 @@ For **each** commit in the change request, exactly one of the following must be 
 **Option A — Has upstream:** At least one URL from the complete upstream refs list corresponds to an upstream Gerrit patch with the **same Change-Id** as that commit.
 
 To build the per-commit mapping:
+
 1. For every URL in the complete upstream refs list, parse its Gerrit change number.
 2. From the Gerrit API results in Step 3, look up that change number and read its `change_id` field.
 3. If that `change_id` matches a downstream commit's `Change-Id`, associate that ref with that commit.
@@ -130,6 +136,7 @@ Record **all** matched refs per commit — they will all appear in the Commit Su
 **Option B — Downstream-only:** The commit subject contains the tag `[downstream-only]` (case-insensitive) **and** the change request description explicitly states that the commit is downstream-only (e.g. a sentence or list item explaining why there is no upstream equivalent).
 
 If neither condition is met for a commit, mark it as **FAIL**:
+
 - No upstream ref and no `[downstream-only]` tag → `FAIL (missing upstream ref — add Upstream-<release>: url or mark [downstream-only])`
 - Has `[downstream-only]` tag but change request description does not acknowledge it → `FAIL (downstream-only tag in commit but not documented in change request description)`
 
@@ -161,6 +168,7 @@ GET https://review.opendev.org/changes/?q=change:{CHANGE_ID}&o=CURRENT_REVISION&
 Use WebFetch for this (the JSON response is small and does not risk summarization). Strip the `)]}'\n` XSSI prefix from the JSON response before parsing.
 
 This returns a list of change objects, each with:
+
 - `id` (numeric change number)
 - `branch` (e.g. `master`, `stable/2025.2`, `unmaintained/2023.2`)
 - `status` (`MERGED`, `NEW`, `ABANDONED`)
@@ -246,6 +254,7 @@ diff \
 Use the per-file line counts from the awk commands to populate the **Files changed** table. For any identifier that appears to differ between the two patches, **always verify with an explicit grep** before reporting it as a difference.
 
 Classify each difference as:
+
 - **EXPECTED**: cherry-pick markers, authorship, date, `Signed-off-by`, `Assisted-By`, trivial rebase offsets in hunk headers.
 - **NOTABLE**: added/removed lines not present in the upstream, file paths that differ (may indicate repo structure differences between branches), extra commits not in upstream.
 - **CONCERN**: functional logic differences — changed conditionals, different error messages, missing methods, removed tests.

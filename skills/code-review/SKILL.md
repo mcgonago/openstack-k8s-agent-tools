@@ -41,9 +41,11 @@ If `gh` is not available or fails (not authenticated, not installed):
 
 1. Inform the user: "GitHub CLI not available. Fetching PR via web."
 2. Derive `<owner>/<repo>` from the current git remote:
+
    ```bash
    git remote -v
    ```
+
    Pick the first remote that points to GitHub (prefer `origin` if it exists, otherwise use whatever is available). Parse the URL to extract the GitHub owner and repository name.
 3. Fall back to WebFetch:
    - Fetch the raw diff: `https://github.com/<owner>/<repo>/pull/<number>.diff`
@@ -75,6 +77,7 @@ Depends-On: https://github.com/openstack-k8s-operators/openstack-operator/pull/4
 ```
 
 For each dependency:
+
 1. Fetch the dependent PR diff and description (via `gh` or WebFetch)
 2. Understand what API changes, new helpers, or new types the dependency introduces
 3. Use this knowledge when reviewing the current PR -- the PR under review may reference types, functions, or patterns that only exist in the dependent PR
@@ -88,6 +91,7 @@ replace github.com/openstack-k8s-operators/lib-common/modules/common => github.c
 ```
 
 These indicate the PR depends on unreleased changes in another repository. For each replace directive:
+
 1. Identify the source repo and branch
 2. Try to find the corresponding open PR:
    - Search via `gh pr list --repo <repo> --head <branch>` if `gh` is available
@@ -126,7 +130,7 @@ Agent(
 
 The agent reads all changed files, evaluates against 11 criteria, and produces a structured review. Dependency context (from Depends-On and replace directives) is included so the agent does not flag dependency-provided code as missing.
 
-6. Present the review report to the user
+1. Present the review report to the user
 
 ## Review Report Format
 

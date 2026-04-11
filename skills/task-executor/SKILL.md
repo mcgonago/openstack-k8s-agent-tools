@@ -34,13 +34,13 @@ Agent(
 
 The agent handles: sequential execution, test-first, checkpointing, group boundaries, and error handling.
 
-6. Execute tasks sequentially (within the agent):
+1. Execute tasks sequentially (within the agent):
    a. Verify dependencies are completed
    b. Execute the task (write code, run commands)
    c. Verify the task (tests pass, build succeeds)
    d. Update the plan file (mark task done)
    e. At group boundaries: pause and ask user to review
-7. On completion — post-implementation:
+1. On completion — post-implementation:
    a. Draft commit message (with Jira link if applicable) and present for approval
    b. Commit with `-s -S` only after user approves — NEVER push
    c. Update the plan file with an Outcome section

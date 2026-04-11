@@ -49,9 +49,9 @@ Agent(
 
 The agent handles: input normalization, cross-repo analysis, planning checklist, strategy proposals, task breakdown, and plan file writing.
 
-4. Present the agent's output to the user
-5. Wait for user to approve a strategy (if not already approved during resume)
-6. Create internal tasks via TaskCreate for tracking
+1. Present the agent's output to the user
+1. Wait for user to approve a strategy (if not already approved during resume)
+1. Create internal tasks via TaskCreate for tracking
 
 When resuming, pass the existing plan content to the agent so it can skip completed sections.
 
@@ -63,6 +63,7 @@ When resuming, pass the existing plan content to the agent so it can skip comple
 ## Jira Integration
 
 This skill follows the hierarchy rules defined in the `/jira` skill:
+
 - Outcome comments go on the **story**, never on the epic
 - If the input ticket is an epic with no stories, suggest creating one before planning
 - Tasks from the plan breakdown can optionally be created as Jira tasks under the story

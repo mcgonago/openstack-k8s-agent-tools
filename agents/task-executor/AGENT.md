@@ -61,6 +61,7 @@ Dependencies: Task 1.1, Task 1.2 (both completed)
 ### Reading (at session start)
 
 Before executing any task, read `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md` if it exists. This provides:
+
 - **Active Work** — what other plans/instances are working on (avoid conflicts)
 - **Discoveries** — prior knowledge about lib-common helpers, peer patterns, conventions
 - **Decisions** — architectural choices already made for this operator
@@ -71,6 +72,7 @@ Use this context throughout execution. If MEMORY.md says "lib-common has Topolog
 ### Writing (during and after execution)
 
 Update MEMORY.md at these points:
+
 - **After discovering something new** during implementation (a helper, a pattern, a gotcha)
 - **After completing a task group** — update Active Work status
 - **After plan completion** — remove the plan entry from Active Work, record any new discoveries
@@ -80,6 +82,7 @@ Update MEMORY.md at these points:
 MEMORY.md MUST stay under 200 lines. This is the limit that gets loaded into context at session start — anything beyond is truncated and wasted.
 
 After every update, check the line count. If over 200 lines, prune in this order:
+
 1. **Active Work** — remove completed plans (they are already in state.json `completed` and the plan file's Outcome section)
 2. **Discoveries** — remove items that are now in the codebase (e.g., "we added TopologyHelper" is no longer a discovery once the code is merged). Keep only discoveries that inform future work.
 3. **Decisions** — keep the last ~10. Move older decisions to `~/.openstack-k8s-agents-plans/<operator>/decisions/YYYY-MM-DD-<topic>.md` if they are still relevant, or delete if superseded.
@@ -96,6 +99,7 @@ When working on long-running task execution:
 - **`/context`** — shows current context usage (tokens used, capacity remaining). Check this periodically during long task execution to know when compaction might be needed.
 
 Guidance:
+
 - If `/context` shows over 80% capacity, consider running `/compact` before starting the next task group
 - After `/compact`, re-read the plan file to restore task progress context
 - MEMORY.md survives compaction because it is re-loaded from disk — this is why keeping it under 200 lines and up-to-date matters
@@ -103,6 +107,7 @@ Guidance:
 ### Conflict handling
 
 If another instance is updating MEMORY.md simultaneously:
+
 - Read before writing
 - Append new entries, don't overwrite existing ones
 - If a discovery contradicts an existing entry, keep both and flag for user review
@@ -145,6 +150,7 @@ The `session` field is the Claude Code session ID (`$CLAUDE_SESSION_ID`). It ide
 ### Operations
 
 **On task start:**
+
 1. Read state.json (create if missing: `{"active_tasks":[],"completed":[],"discoveries":[]}`)
 2. Check no other entry has the same plan+task — if it does, check the session:
    - Same session: resume (the previous attempt may have been interrupted)
@@ -152,13 +158,16 @@ The `session` field is the Claude Code session ID (`$CLAUDE_SESSION_ID`). It ide
 3. Add entry to `active_tasks` with plan, task, worktree, branch, session, timestamp
 
 **On task completion:**
+
 1. Remove the entry from `active_tasks`
 2. On plan completion, add to `completed` with commit SHA
 
 **On discovery:**
+
 1. Append to `discoveries` array (deduplicate before appending)
 
 **Cross-plan dependency check:**
+
 1. To check if another plan's task is done: search `completed` and the other plan file
 2. To check if a task is in progress: search `active_tasks`
 
@@ -198,18 +207,21 @@ After all tasks are done and the commit is approved:
 1. Report the worktree location and branch to the user
 2. Ask: "Merge into main now, or leave the worktree for manual review?"
 3. If merge:
+
    ```bash
    cd <project-root>
    git merge --no-ff "$BRANCH" -m "Merge $BRANCH: <plan summary>"
    git worktree remove "$WORKTREE"
    git branch -d "$BRANCH"
    ```
+
 4. If not merging: keep the worktree and report manual merge instructions
 5. Update state.json: remove from active_tasks, add to completed
 
 ### Parallel execution
 
 Multiple plans can execute simultaneously in separate worktrees:
+
 ```
 Instance 1: .worktrees/OSPRH-2345 (branch: feature/OSPRH-2345)
 Instance 2: .worktrees/OSPRH-6789 (branch: feature/OSPRH-6789)
@@ -238,15 +250,18 @@ Each task may declare dependencies in the plan file:
 Three types of dependencies:
 
 **Intra-plan** (same plan file):
+
 - Check: is the referenced task marked `[x]` in the plan file?
 - If not done: blocked
 
 **Cross-plan** (another plan in the same operator):
+
 - Format in plan: `Depends on: OSPRH-6789/Task 1.1`
 - Check: read the other plan file from `~/.openstack-k8s-agents-plans/<operator>/`
 - Also check state.json `completed` array for the other plan
 
 **External** (a PR in another repo):
+
 - Format in plan: `External dep: lib-common PR #789`
 - Check: `gh pr view 789 --repo openstack-k8s-operators/lib-common --json state`
 - If state is `MERGED`: resolved
@@ -507,6 +522,7 @@ When all tasks are completed (or a logical set of tasks forms a complete unit of
 Compose the commit message following [git commit guidelines](https://git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project):
 
 **Format:**
+
 ```
 <type>: <subject line> (50 chars max)
 
@@ -519,26 +535,31 @@ Jira: [OSPRH-2345](https://issues.redhat.com/browse/OSPRH-2345)
 ```
 
 **Rules:**
+
 - Subject line: imperative mood, no period, max 50 characters
 - Body: wrap at 72 characters, explain the "why"
 - If a Jira ticket was the source for `/feature`, include a full markdown link in the commit body
 - Type prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
 
 **Human approval required:**
+
 1. Draft the commit message and present it to the user
 2. Wait for the user to approve or edit it
 3. Do NOT commit until the user says "go" or approves
 4. NEVER push — only the human operator pushes. State: "Commit created. Review the diff and push when ready."
 
 **Commit signing is MANDATORY.** Every `git commit` command MUST include `-s -S` flags:
+
 ```bash
 git commit -s -S -m "..."
 ```
+
 NEVER run `git commit` without both `-s` (Signed-off-by) and `-S` (GPG/SSH signature). If the commit fails due to signing issues, report the error and let the user fix their signing configuration — do NOT retry without the flags.
 
 ### Plan Update
 
 After the commit is approved:
+
 1. Update the plan file at `~/.openstack-k8s-agents-plans/<operator>/`
 2. Mark all completed tasks as `[x]`
 3. Add an **Outcome** section at the end of the plan file:
@@ -577,6 +598,7 @@ If the plan was sourced from a Jira ticket, follow the `/jira` skill hierarchy r
 ### Memory Update
 
 After plan completion (commit approved, outcome written), update `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md`:
+
 1. Move the plan entry in Active Work to show completion
 2. Add any new discoveries made during implementation
 3. Record any decisions that deviated from the original plan

@@ -276,7 +276,7 @@ You are a specialist in <domain>.
 ...
 ```
 
-### Frontmatter Fields
+### Agent Frontmatter Fields
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -346,6 +346,7 @@ Hooks: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, shellchec
 ### CI
 
 GitHub Actions workflow at `.github/workflows/validate.yml` runs on push/PR:
+
 - Plugin structure validation
 - Plugin functionality tests
 - Shell script syntax checking

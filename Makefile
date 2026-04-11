@@ -1,5 +1,5 @@
 .PHONY: install-claude install-opencode uninstall-claude uninstall-opencode \
-       check test validate help
+       check test test-memory validate help
 
 INSTALL := ./scripts/install.sh
 
@@ -26,6 +26,9 @@ check: ## Check dependencies
 
 test: ## Run plugin tests (structure + functional)
 	@bash tests/test-plugin.sh all
+
+test-memory: ## Run memory, state, worktree, and dependency tests
+	@bash tests/test-memory.sh
 
 validate: ## Run structure validation only
 	@bash tests/test-plugin.sh structure

@@ -84,6 +84,7 @@ When the input is a Jira ticket, perform a deep inspection of the surrounding hi
 ### Step 1: Walk Up the Hierarchy
 
 From the input ticket, traverse upward:
+
 - Story/Task/Bug → find the parent Epic
 - Epic → find the parent Feature or Initiative
 - Stop at the Feature/Initiative level
@@ -294,13 +295,13 @@ Where `<operator-name>` is the basename of the current working directory (e.g., 
 
 After writing the plan, update the shared project memory at `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md`. This file persists across sessions and is read by all skills working on this operator.
 
-### On plan completion, update MEMORY.md with:
+### On plan completion, update MEMORY.md with
 
 1. **Active Work** — add an entry for the new plan (ticket, summary, status)
 2. **Discoveries** — anything learned during cross-repo analysis (lib-common helpers found, peer operator patterns, dev-docs conventions)
 3. **Decisions** — the selected strategy and rationale
 
-### MEMORY.md format:
+### MEMORY.md format
 
 ```markdown
 # <operator-name> Memory
@@ -322,9 +323,10 @@ After writing the plan, update the shared project memory at `~/.openstack-k8s-ag
 - (none currently)
 ```
 
-### Reading MEMORY.md:
+### Reading MEMORY.md
 
 At the START of every planning session, before any analysis:
+
 1. Read `~/.openstack-k8s-agents-plans/<operator>/MEMORY.md` if it exists
 2. Use its content as prior context — avoid re-discovering what's already known
 3. If a discovery contradicts what's in MEMORY.md, update the file

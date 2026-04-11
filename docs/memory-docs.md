@@ -140,6 +140,7 @@ Shared project memory that persists across sessions. All skills read it at start
 ### Why It Matters
 
 Without MEMORY.md, each session starts from zero. With it:
+
 - The feature agent doesn't re-discover that lib-common already has a helper
 - The task-executor knows what decisions were made during planning
 - Parallel instances know what each other is working on
@@ -149,7 +150,7 @@ Without MEMORY.md, each session starts from zero. With it:
 
 Tracks active work across sessions and instances. Enables dependency resolution and prevents duplicate execution.
 
-### Format
+### State File Format
 
 ```json
 {
@@ -254,3 +255,25 @@ Options:
 2. Proceed anyway (override)
 3. Stop and wait
 ```
+
+## Testing
+
+The test script (`tests/test-memory.sh`) simulates the full task-executor workflow without Claude Code. It creates a temporary environment with a git repo and a dummy plan, then steps through the mechanics as the task-executor agent would: creating MEMORY.md, registering tasks in state.json, setting up worktrees, checking dependencies, checkpointing progress, and pruning memory. No operator code or MCP is needed -- it validates the file operations and state transitions that underpin the memory architecture.
+
+```bash
+make test-memory
+```
+
+| Phase | Tests | What it validates |
+|-------|-------|-------------------|
+| MEMORY.md lifecycle | 7 | Create, required sections, update, line count |
+| state.json lifecycle | 6 | Create, register task, session ID, duplicate detection, complete, discovery |
+| Worktree isolation | 4 | Create, correct branch, isolation from main, cleanup |
+| Dependency resolution | 6 | Intra-plan blocked/unblocked, external dep detection, cross-plan format |
+| Plan checkpointing | 2 | Checkbox state, next pending task |
+| MEMORY.md pruning | 2 | Over-limit detection, pruned under 200 lines |
+
+Test files:
+
+- `tests/test-memory.sh` -- the test script
+- `tests/sample-plans/dummy-plan.md` -- dummy plan with dependencies
