@@ -331,6 +331,10 @@ At the START of every planning session, before any analysis:
 
 If MEMORY.md doesn't exist, create it after the first plan is written.
 
+### Pruning (keep under 200 lines)
+
+MEMORY.md MUST stay under 200 lines. After updating, check the line count and prune if needed: remove completed Active Work entries, stale discoveries (things now in the codebase), and old decisions (keep last ~10). MEMORY.md is a working summary — state.json and plan files are the long-term record.
+
 ## 7. Resume Protocol
 
 Before starting a new plan, always check for an existing one.

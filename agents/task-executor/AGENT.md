@@ -73,7 +73,32 @@ Use this context throughout execution. If MEMORY.md says "lib-common has Topolog
 Update MEMORY.md at these points:
 - **After discovering something new** during implementation (a helper, a pattern, a gotcha)
 - **After completing a task group** — update Active Work status
-- **After plan completion** — move the plan entry from Active Work to completed, record any new discoveries
+- **After plan completion** — remove the plan entry from Active Work, record any new discoveries
+
+### Pruning (keep under 200 lines)
+
+MEMORY.md MUST stay under 200 lines. This is the limit that gets loaded into context at session start — anything beyond is truncated and wasted.
+
+After every update, check the line count. If over 200 lines, prune in this order:
+1. **Active Work** — remove completed plans (they are already in state.json `completed` and the plan file's Outcome section)
+2. **Discoveries** — remove items that are now in the codebase (e.g., "we added TopologyHelper" is no longer a discovery once the code is merged). Keep only discoveries that inform future work.
+3. **Decisions** — keep the last ~10. Move older decisions to `~/.openstack-k8s-agents-plans/<operator>/decisions/YYYY-MM-DD-<topic>.md` if they are still relevant, or delete if superseded.
+4. **Blockers** — remove resolved blockers.
+
+MEMORY.md is a working summary, not a log. state.json + plan files (with Outcome sections) are the long-term record.
+
+### Context management
+
+When working on long-running task execution:
+
+- **`/compact`** — compresses the current conversation context. Use when the context window is getting full (many files read, many tool calls). After compaction, MEMORY.md is re-read automatically by Claude Code, so prior context is preserved even though conversation history is summarized.
+
+- **`/context`** — shows current context usage (tokens used, capacity remaining). Check this periodically during long task execution to know when compaction might be needed.
+
+Guidance:
+- If `/context` shows over 80% capacity, consider running `/compact` before starting the next task group
+- After `/compact`, re-read the plan file to restore task progress context
+- MEMORY.md survives compaction because it is re-loaded from disk — this is why keeping it under 200 lines and up-to-date matters
 
 ### Conflict handling
 
