@@ -200,10 +200,10 @@ More workflows documented under [docs/](docs/).
 - [x] `install.sh` — manual installation script with platform support (Claude Code, OpenCode)
 - [x] Code review accepts PR number, branch, or specific files
 - [x] Shared memory (MEMORY.md), state tracking (state.json), worktree isolation, dependency resolution
+- [x] Improve docs/ with a section about TOKENS
+- [ ] Guidelines on sandboxing
 - [ ] Jira sub-task export from task breakdowns
 - [ ] Plan diffing (detect Jira ticket changes after plan creation)
-- [ ] Improve docs/ with a section about TOKENS
-- [ ] Guidelines on sandboxing
 
 ## Contributing
 

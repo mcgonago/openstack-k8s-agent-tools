@@ -82,12 +82,110 @@ Set `READ_ONLY_MODE` to `"true"` when you only need to read tickets (recommended
 
 Note: even with `READ_ONLY_MODE=false`, the plugin's global rules require human approval before posting any comment. See `~/.claude/CLAUDE.md`.
 
+## GitHub CLI (`gh`) Authentication
+
+The `/code-review` and `/feature` skills use `gh` CLI for PR fetching and cross-repo analysis. `gh` must be authenticated.
+
+### Setup
+
+```bash
+gh auth login
+```
+
+Follow the prompts to authenticate via browser or token.
+
+### Token Permissions (Principle of Least Privilege)
+
+If using a personal access token (PAT) instead of browser auth, grant only the permissions each skill needs:
+
+**For `/code-review`** (read-only PR access):
+
+| Scope | Permission | Why |
+|-------|-----------|-----|
+| `repo` | Read | Fetch PR diffs, metadata, comments |
+| `read:org` | Read | Resolve org membership for private repos |
+
+**For `/feature`** (cross-repo analysis):
+
+| Scope | Permission | Why |
+|-------|-----------|-----|
+| `repo` | Read | Browse lib-common, peer operators, dev-docs |
+| `read:org` | Read | Search within the openstack-k8s-operators org |
+
+No write permissions are needed. The plugin never pushes code or creates PRs -- only the human operator does.
+
+### Fine-Grained PAT (Recommended)
+
+GitHub fine-grained PATs allow per-repository scoping:
+
+```
+Token name: openstack-k8s-agent-tools
+Expiration: 90 days
+Repository access: All repositories (or select specific ones)
+Permissions:
+  Contents: Read-only
+  Pull requests: Read-only
+  Metadata: Read-only
+```
+
+Generate at [https://github.com/settings/tokens?type=beta](https://github.com/settings/tokens?type=beta).
+
+Set the token:
+
+```bash
+export GH_TOKEN="ghp_your_token_here"
+```
+
+Or authenticate once:
+
+```bash
+gh auth login --with-token < ~/.gh-token
+```
+
+## Jira Token Permissions
+
+### Jira Cloud API Token
+
+Jira Cloud API tokens inherit all permissions of the user account. There are no granular scopes. To limit exposure:
+
+- Use a dedicated service account with restricted project access
+- Set `READ_ONLY_MODE=true` in the MCP config (recommended for planning)
+- The plugin's global rules (`~/.claude/CLAUDE.md`) require human approval before any write operation
+
+Generate at [https://id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
+
+### Jira Server / Data Center PAT
+
+Personal access tokens on Jira Server/DC can be scoped. Create a token with:
+
+- Read access to the relevant projects (OSPRH, RHOSZ, etc.)
+- No admin permissions
+- Set an expiration date
+
+### Token Storage
+
+Never commit tokens to git. Store them as environment variables or in a secrets manager:
+
+```bash
+# In ~/.bashrc or ~/.zshrc (not committed)
+export JIRA_API_TOKEN="your_token"
+export GH_TOKEN="ghp_your_token"
+```
+
+Or use a `.env` file (gitignored):
+
+```bash
+# .env (add to .gitignore)
+JIRA_API_TOKEN=your_token
+GH_TOKEN=ghp_your_token
+```
+
 ## Which Skills Need MCP
 
-| Skill | MCP Required | What It Uses |
-|-------|-------------|-------------|
-| `/feature` | Optional | Reads Jira tickets for planning. Falls back to spec files without it. |
-| `/jira` | Optional | Reads and inspects tickets. Can post comments if READ_ONLY_MODE=false. |
-| `/task-executor` | Optional | Posts outcome comments to Jira after implementation. |
-| `/code-review` | No | Uses `gh` CLI or WebFetch for PRs, not MCP. |
-| All other skills | No | No MCP integration. |
+| Skill | Jira MCP | GitHub CLI | What It Uses |
+|-------|---------|-----------|-------------|
+| `/feature` | Optional | Optional | Jira: reads tickets. gh: cross-repo analysis. Falls back to spec files / WebFetch. |
+| `/jira` | Optional | No | Reads and inspects tickets. Posts comments if READ_ONLY_MODE=false. |
+| `/task-executor` | Optional | No | Posts outcome comments to Jira after implementation. |
+| `/code-review` | No | Optional | Fetches PR diffs and metadata. Falls back to WebFetch. |
+| All other skills | No | No | No external integrations. |
