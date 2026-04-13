@@ -1,6 +1,7 @@
 ---
 name: analyze-logs
 description: Advanced log analysis for openstack-k8s-operators operators with pattern matching and intelligent insights
+argument-hint: "<log-file | ->"
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Grep"]
 context: fork

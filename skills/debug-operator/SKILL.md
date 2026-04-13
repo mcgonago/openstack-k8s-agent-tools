@@ -1,6 +1,7 @@
 ---
 name: debug-operator
 description: Debug and develop openstack-k8s-operators operators with comprehensive workflows including make targets, tests, and deployments
+argument-hint: "[operator-name] [namespace]"
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Grep", "LS", "TodoWrite"]
 context: fork

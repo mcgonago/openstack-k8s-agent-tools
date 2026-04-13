@@ -1,6 +1,7 @@
 ---
 name: task-executor
 description: Execute implementation plans for openstack-k8s-operators operators task-by-task with checkpointing and resumability
+argument-hint: "[plan-file-path]"
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Agent", "TaskCreate", "TaskUpdate"]
 context: fork

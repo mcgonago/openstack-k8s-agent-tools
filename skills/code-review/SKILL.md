@@ -1,6 +1,7 @@
 ---
 name: code-review
 description: Code review agent for openstack-k8s-operators following dev-docs conventions, lib-common patterns, and openstack-k8s-operators best practices
+argument-hint: "<PR-number | branch | file-path>"
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Grep", "Glob", "WebFetch", "Agent"]
 context: fork

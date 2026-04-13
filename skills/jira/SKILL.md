@@ -1,6 +1,7 @@
 ---
 name: jira
 description: Jira integration for openstack-k8s-operators workflows. Reads tickets, validates hierarchy (feature/epic/story), posts outcome comments, and suggests story creation.
+argument-hint: "<ticket-id>"
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Write", "Grep"]
 context: fork

@@ -1,6 +1,7 @@
 ---
 name: feature
 description: Plan new features or bug fixes for openstack-k8s-operators operators with Jira integration, cross-repo analysis, and structured implementation strategies
+argument-hint: "<ticket-id | spec-file.md> [--continue]"
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Write", "Grep", "Glob", "WebFetch", "Agent", "TaskCreate", "TaskUpdate"]
 context: fork

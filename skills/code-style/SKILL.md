@@ -1,6 +1,7 @@
 ---
 name: code-style
 description: Apply Go code style best practices for openstack-k8s-operators operators based on gopls modernize and openstack-k8s-operators conventions
+argument-hint: "[file.go]"
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Grep", "Glob", "Edit", "MultiEdit"]
 context: fork

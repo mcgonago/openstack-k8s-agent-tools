@@ -1,6 +1,7 @@
 ---
 name: explain-flow
 description: Analyze and explain code flow in openstack-k8s-operators operators with automated parsing and visual diagrams
+argument-hint: "[directory]"
 user-invocable: true
 allowed-tools: ["Read", "Grep", "Glob", "Bash"]
 context: fork
