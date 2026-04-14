@@ -2,6 +2,8 @@
 
 Claude Code plugin for [openstack-k8s-operators](https://github.com/openstack-k8s-operators/) development — debugging, testing, code review, feature planning, and plan execution.
 
+[![asciicast](https://asciinema.org/a/886205.svg)](https://asciinema.org/a/886205)
+
 ## Installation
 
 ### Claude Code (recommended)
@@ -56,6 +58,7 @@ make install-claude
 | `/feature` | `feature` | Feature/bug planning with Jira, cross-repo analysis, structured strategies |
 | `/code-review` | `code-review` | Code review against openstack-k8s-operators conventions (PR number, branch diff, or specific files) |
 | `/task-executor` | `task-executor` | Execute plans task-by-task with checkpointing and resume |
+| `/backport-review` | — | Compare downstream backport change requests against upstream Gerrit patches |
 | `/jira` | — | Jira integration — ticket inspection, hierarchy validation, outcome posting |
 
 Skills with an agent load an `AGENT.md` file that contains the full domain knowledge and methodology. Skills without an agent are self-contained in their `SKILL.md`.
