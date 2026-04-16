@@ -1,0 +1,8 @@
+admin:
+  password_hash: "scrypt:32768:8:1$KzO8FJ5jgN9BSLHc$219ffc192b7b6bb49268342f7a7bfe08aee64a8aefdef1e0d199d24eecbd5d2e56d3ff6c91a603e2a8b63db121260bd60f2c6dca20481f3a7f3b60fe379da255"
+  role: admin
+  created: "2026-04-14T00:00:00"
+omcgonag:
+  password_hash: "scrypt:32768:8:1$ZCM3tPA7V11joQ4w$95f86a034887bf6be99345c82d64d6ef87ff758619a84381ddef2d6d16864769f55ad80debb60b991bc9f3b025915a722bd82d6b15250cc12e2029a336b31481"
+  role: admin
+  created: "2026-04-14T00:00:00"

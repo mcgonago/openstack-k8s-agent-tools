@@ -1,0 +1,5 @@
+operator_repos:
+  - ~/Work/openstack-k8s-operators/openstack-operator
+  - ~/Work/openstack-k8s-operators/nova-operator
+  - ~/Work/openstack-k8s-operators/keystone-operator
+  - ~/Work/openstack-k8s-operators/horizon-operator
