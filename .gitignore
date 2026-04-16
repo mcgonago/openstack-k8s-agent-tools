@@ -2,4 +2,4 @@
 __pycache__/
 *.pyc
 scripts/.venv/
-scripts/data/cache/
+scripts/data/
