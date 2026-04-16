@@ -17,3 +17,8 @@ PLUGIN_PATH = os.environ.get(
     str(Path.home() / 'Work/mymcp/workspace/iproject/projects'
         '/openstack_k8s_agent_tools/repo/openstack-k8s-agent-tools')
 )
+
+PLANS_ROOT = os.environ.get(
+    'K8S_AGENT_TOOLS_PLANS_ROOT',
+    str(Path.home() / '.openstack-k8s-agents-plans')
+)

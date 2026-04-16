@@ -13,6 +13,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from . import config
 from .skill_catalog import get_skill_catalog, get_skill_detail
 from .operator_scanner import scan_operators
+from .plan_monitor import (scan_plans, get_operator_plans, parse_plan_tasks,
+                           read_memory, read_state_json,
+                           compute_aggregate_progress, get_last_activity_ago,
+                           seed_demo_data, get_plans_root)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('K8S_AGENT_TOOLS_SECRET',
@@ -344,6 +348,101 @@ tr:hover td { background: var(--bg-tertiary); }
     50% { opacity: 0.5; }
 }
 .pulse { animation: pulse 2s infinite; }
+
+/* Phase 2: Progress bars */
+.progress-bar {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+    flex: 1;
+}
+.progress-fill {
+    background: var(--accent);
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+.progress-100 .progress-fill {
+    background: var(--success);
+}
+.progress-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.progress-pct {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 42px;
+    text-align: right;
+}
+
+/* Phase 2: Plan status badges */
+.badge-active {
+    background: #3d2008;
+    color: var(--accent);
+    animation: pulse 2s infinite;
+}
+.badge-done {
+    background: #0d3820;
+    color: var(--success);
+}
+.badge-pending {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+/* Phase 2: Task checklist */
+.task-list { list-style: none; padding: 0; }
+.task-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 14px;
+}
+.task-icon-done { color: var(--success); }
+.task-icon-pending { color: var(--text-secondary); }
+.task-deps {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 28px;
+    padding-bottom: 4px;
+}
+
+/* Phase 2: Plan cards */
+.plan-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+.plan-row:last-child { border-bottom: none; }
+.plan-title { flex: 1; font-weight: 600; }
+.plan-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Phase 2: Memory viewer */
+.memory-body {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-x: auto;
+    max-height: 600px;
+    overflow-y: auto;
+    font-family: monospace;
+}
 """
 
 # ---------------------------------------------------------------------------
@@ -356,6 +455,7 @@ HEADER_HTML = """
         <a href="/" class="{{ 'active' if active_page == 'splash' else '' }}">Home</a>
         <a href="/dashboard" class="{{ 'active' if active_page == 'dashboard' else '' }}">Dashboard</a>
         <a href="/skills" class="{{ 'active' if active_page == 'skills' else '' }}">Skills</a>
+        <a href="/plans" class="{{ 'active' if active_page == 'plans' else '' }}">Plans</a>
 
         <div class="dropdown">
             <button>Ecosystem &#9662;</button>
@@ -452,7 +552,7 @@ BASE_TEMPLATE = """<!DOCTYPE html>
 {% endwith %}
 {{ content | safe }}
 <footer class="site-footer">
-    OpenStack K8s Agent Tools Server &mdash; Phase 1 &mdash; {{ now }}
+    OpenStack K8s Agent Tools Server &mdash; Phase 2 &mdash; {{ now }}
 </footer>
 </body>
 </html>"""
@@ -715,6 +815,18 @@ DASHBOARD_TEMPLATE = """
             <span class="stat-value">{{ total_crds }}</span>
             <span class="stat-label">CRDs</span>
         </div>
+        <div class="stat-card">
+            <span class="stat-value {{ 'pulse' if plan_active > 0 else '' }}">{{ plan_active }}</span>
+            <span class="stat-label">Active Plans</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ plan_done }}/{{ plan_total }}</span>
+            <span class="stat-label">Tasks Done</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" style="font-size:20px">{{ plan_last_activity }}</span>
+            <span class="stat-label">Last Activity</span>
+        </div>
     </div>
 
     {% if operators %}
@@ -781,12 +893,23 @@ def dashboard():
     operators = scan_operators(repos)
     total_controllers = sum(o['controllers'] for o in operators)
     total_crds = sum(o['crds'] for o in operators)
+
+    plans_root = get_plans_root()
+    plan_operators = scan_plans(plans_root)
+    plan_active = sum(o['active_tasks'] for o in plan_operators)
+    agg = compute_aggregate_progress(plans_root)
+    plan_last = get_last_activity_ago(plans_root)
+
     return _render(DASHBOARD_TEMPLATE,
                    title='Dashboard',
                    active_page='dashboard',
                    operators=operators,
                    total_controllers=total_controllers,
-                   total_crds=total_crds)
+                   total_crds=total_crds,
+                   plan_active=plan_active,
+                   plan_done=agg['done'],
+                   plan_total=agg['total'],
+                   plan_last_activity=plan_last)
 
 
 # --- Skills catalog -----------------------------------------------------
@@ -1029,10 +1152,377 @@ def admin_panel():
                    users=users)
 
 
+# --- Plans list (Phase 2) ------------------------------------------------
+PLANS_TEMPLATE = """
+<div class="container">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px">
+        <h2>&#x1f4cb; Plans</h2>
+        {% if not plan_operators %}
+        <form method="POST" action="/plans/seed-demo">
+            <button type="submit" class="btn btn-primary">Seed Demo Data</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if plan_operators %}
+    <div class="stats-row">
+        <div class="stat-card">
+            <span class="stat-value {{ 'pulse' if total_active > 0 else '' }}">{{ total_active }}</span>
+            <span class="stat-label">Active Plans</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ agg.done }}/{{ agg.total }}</span>
+            <span class="stat-label">Tasks Done</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" style="font-size:20px">{{ last_activity_ago }}</span>
+            <span class="stat-label">Last Activity</span>
+        </div>
+    </div>
+
+    {% for op in plan_operators %}
+    <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px">
+            <h3><a href="/plans/{{ op.name }}">{{ op.name }}</a></h3>
+            <span class="plan-meta">
+                {{ op.plan_count }} plan{{ 's' if op.plan_count != 1 else '' }}
+                | {{ op.active_tasks }} active
+                | {{ op.tasks_done }}/{{ op.tasks_total }} tasks done
+            </span>
+        </div>
+        {% for p in op.plans %}
+        <div class="plan-row">
+            <a href="/plans/{{ op.name }}/{{ p.slug }}" class="plan-title">{{ p.title or p.slug }}</a>
+            <span class="badge badge-{{ p.status }}">{{ p.status }}</span>
+            <div class="progress-row" style="min-width:200px">
+                <div class="progress-bar {{ 'progress-100' if p.progress_percent == 100 else '' }}">
+                    <div class="progress-fill" style="width:{{ p.progress_percent }}%"></div>
+                </div>
+                <span class="progress-pct">{{ p.progress_percent }}%</span>
+            </div>
+            <span class="plan-meta">{{ p.last_modified_ago }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="card" style="text-align:center; padding:48px">
+        <p style="color:var(--text-secondary); font-size:16px; margin-bottom:12px">
+            No plans found
+        </p>
+        <p style="color:var(--text-secondary); font-size:14px; margin-bottom:24px">
+            Plans are created when you run <code>/feature</code> or
+            <code>/task-executor</code> through the openstack-k8s-agent-tools plugin.
+        </p>
+        <form method="POST" action="/plans/seed-demo">
+            <button type="submit" class="btn btn-primary" style="padding:10px 24px">
+                Seed Demo Data
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+"""
+
+
+@app.route('/plans')
+@login_required
+def plans_list():
+    plans_root = get_plans_root()
+    plan_operators = scan_plans(plans_root)
+    for op in plan_operators:
+        op['plans'] = get_operator_plans(plans_root, op['name'])
+    total_active = sum(o['active_tasks'] for o in plan_operators)
+    agg = compute_aggregate_progress(plans_root)
+    last_ago = get_last_activity_ago(plans_root)
+    return _render(PLANS_TEMPLATE,
+                   title='Plans',
+                   active_page='plans',
+                   plan_operators=plan_operators,
+                   total_active=total_active,
+                   agg=agg,
+                   last_activity_ago=last_ago)
+
+
+@app.route('/plans/seed-demo', methods=['POST'])
+@login_required
+def plans_seed():
+    seed_demo_data()
+    flash('Demo data seeded!', 'success')
+    return redirect(url_for('plans_list'))
+
+
+# --- Plans per operator (Phase 2) ---------------------------------------
+PLANS_OPERATOR_TEMPLATE = """
+<div class="container">
+    <p style="margin-bottom:16px">
+        <a href="/plans">&larr; Back to Plans</a>
+    </p>
+    <h2 style="margin-bottom:24px">{{ operator }}</h2>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <span class="stat-value">{{ plans | length }}</span>
+            <span class="stat-label">Plans</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ state_info.active_tasks | length }}</span>
+            <span class="stat-label">Active Tasks</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ state_info.completed_plans | length }}</span>
+            <span class="stat-label">Completed</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom:12px">Plans</h3>
+        {% for p in plans %}
+        <div class="plan-row">
+            <a href="/plans/{{ operator }}/{{ p.slug }}" class="plan-title">{{ p.title or p.slug }}</a>
+            <span class="badge badge-{{ p.status }}">{{ p.status }}</span>
+            <div class="progress-row" style="min-width:200px">
+                <div class="progress-bar {{ 'progress-100' if p.progress_percent == 100 else '' }}">
+                    <div class="progress-fill" style="width:{{ p.progress_percent }}%"></div>
+                </div>
+                <span class="progress-pct">{{ p.progress_percent }}%</span>
+            </div>
+            <span class="plan-meta">{{ p.last_modified_ago }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if memory_info.exists %}
+    <div class="card">
+        <h3>MEMORY.md</h3>
+        <p style="font-size:12px; color:var(--text-secondary); margin-bottom:8px">
+            {{ memory_info.line_count }} lines | Last modified: {{ memory_info.last_modified_ago }}
+        </p>
+        <a href="/plans/{{ operator }}/memory" class="btn btn-sm">View MEMORY.md</a>
+    </div>
+    {% endif %}
+
+    {% if state_info.active_tasks %}
+    <div class="card">
+        <h3>Active Tasks (state.json)</h3>
+        <table>
+            <thead>
+                <tr><th>Plan</th><th>Task</th><th>Worktree</th><th>Started</th></tr>
+            </thead>
+            <tbody>
+            {% for t in state_info.active_tasks %}
+                <tr>
+                    <td>{{ t.plan }}</td>
+                    <td>{{ t.task }}</td>
+                    <td><code>{{ t.worktree }}</code></td>
+                    <td>{{ t.started }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+"""
+
+
+@app.route('/plans/<operator>')
+@login_required
+def plans_operator(operator):
+    plans_root = get_plans_root()
+    plans = get_operator_plans(plans_root, operator)
+    if not plans:
+        flash(f'No plans found for {operator}.', 'error')
+        return redirect(url_for('plans_list'))
+    memory_info = read_memory(plans_root, operator)
+    state_info = read_state_json(plans_root, operator)
+    return _render(PLANS_OPERATOR_TEMPLATE,
+                   title=f'Plans: {operator}',
+                   active_page='plans',
+                   operator=operator,
+                   plans=plans,
+                   memory_info=memory_info,
+                   state_info=state_info)
+
+
+# --- Plan detail (Phase 2) -----------------------------------------------
+PLAN_DETAIL_TEMPLATE = """
+<div class="container" style="max-width:900px">
+    <p style="margin-bottom:16px">
+        <a href="/plans/{{ operator }}">&larr; Back to {{ operator }}</a>
+    </p>
+
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px">
+        <h2>{{ plan_data.title or slug }}</h2>
+        <span class="badge badge-{{ status }}">{{ status }}</span>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <span class="stat-value">{{ plan_data.tasks_total }}</span>
+            <span class="stat-label">Total Tasks</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ plan_data.tasks_done }}</span>
+            <span class="stat-label">Done</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ plan_data.progress_percent }}%</span>
+            <span class="stat-label">Progress</span>
+        </div>
+    </div>
+
+    <div class="progress-row" style="margin-bottom:24px">
+        <div class="progress-bar {{ 'progress-100' if plan_data.progress_percent == 100 else '' }}" style="height:12px">
+            <div class="progress-fill" style="width:{{ plan_data.progress_percent }}%; height:12px"></div>
+        </div>
+        <span class="progress-pct">{{ plan_data.progress_percent }}%</span>
+    </div>
+
+    {% if plan_data.strategy %}
+    <div class="card">
+        <h3>Approved Strategy</h3>
+        <p style="font-size:14px; margin-top:8px">{{ plan_data.strategy }}</p>
+    </div>
+    {% endif %}
+
+    {% for group in plan_data.groups %}
+    <div class="card">
+        <h3>{{ group.name }}</h3>
+        <ul class="task-list">
+        {% for task in group.tasks %}
+            <li class="task-item">
+                {% if task.done %}
+                    <span class="task-icon-done">&#x2705;</span>
+                {% else %}
+                    <span class="task-icon-pending">&#x2B1C;</span>
+                {% endif %}
+                <span>{{ task.name }}</span>
+            </li>
+            {% if task.dependencies is defined and task.dependencies %}
+            <li class="task-deps">Dependencies: {{ task.dependencies }}</li>
+            {% endif %}
+        {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+
+    {% if plan_data.outcome %}
+    <div class="card">
+        <h3>Outcome</h3>
+        <p style="font-size:14px; margin-top:8px">{{ plan_data.outcome }}</p>
+    </div>
+    {% endif %}
+
+    {% if state_info.active_tasks %}
+    <div class="card">
+        <h3>state.json — Active Work</h3>
+        <table>
+            <thead>
+                <tr><th>Task</th><th>Worktree</th><th>Session</th><th>Started</th></tr>
+            </thead>
+            <tbody>
+            {% for t in state_info.active_tasks %}
+                <tr>
+                    <td>{{ t.task }}</td>
+                    <td><code>{{ t.worktree }}</code></td>
+                    <td><code>{{ t.session_id }}</code></td>
+                    <td>{{ t.started }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:16px">
+        <a href="/plans/{{ operator }}/{{ slug }}/memory" class="btn">View MEMORY.md</a>
+    </div>
+</div>
+"""
+
+
+@app.route('/plans/<operator>/<slug>')
+@login_required
+def plan_detail(operator, slug):
+    plans_root = get_plans_root()
+    plan_file = Path(plans_root) / operator / f'{slug}.md'
+    plan_data = parse_plan_tasks(plan_file)
+    if not plan_data:
+        flash(f'Plan not found: {slug}', 'error')
+        return redirect(url_for('plans_operator', operator=operator))
+    state_info = read_state_json(plans_root, operator)
+    from .plan_monitor import _plan_status, _read_state
+    state_raw = _read_state(Path(plans_root) / operator)
+    status = _plan_status(f'{slug}.md', state_raw)
+    return _render(PLAN_DETAIL_TEMPLATE,
+                   title=f'Plan: {slug}',
+                   active_page='plans',
+                   operator=operator,
+                   slug=slug,
+                   plan_data=plan_data,
+                   state_info=state_info,
+                   status=status)
+
+
+# --- MEMORY.md viewer (Phase 2) ------------------------------------------
+MEMORY_TEMPLATE = """
+<div class="container" style="max-width:900px">
+    <p style="margin-bottom:16px">
+        <a href="/plans/{{ operator }}">&larr; Back to {{ operator }}</a>
+    </p>
+    <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px">
+            <h2>MEMORY.md &mdash; {{ operator }}</h2>
+            <span class="plan-meta">
+                {{ memory_info.line_count }} lines |
+                Last modified: {{ memory_info.last_modified_ago }}
+            </span>
+        </div>
+        {% if memory_info.exists %}
+        <div class="memory-body">{{ memory_info.content }}</div>
+        {% else %}
+        <p style="color:var(--text-secondary); text-align:center; padding:24px">
+            No MEMORY.md found for {{ operator }}.
+        </p>
+        {% endif %}
+    </div>
+</div>
+"""
+
+
+@app.route('/plans/<operator>/<slug>/memory')
+@login_required
+def plan_memory(operator, slug):
+    plans_root = get_plans_root()
+    memory_info = read_memory(plans_root, operator)
+    return _render(MEMORY_TEMPLATE,
+                   title=f'MEMORY.md: {operator}',
+                   active_page='plans',
+                   operator=operator,
+                   slug=slug,
+                   memory_info=memory_info)
+
+
+# Also allow direct memory access per operator
+@app.route('/plans/<operator>/memory')
+@login_required
+def operator_memory(operator):
+    plans_root = get_plans_root()
+    memory_info = read_memory(plans_root, operator)
+    return _render(MEMORY_TEMPLATE,
+                   title=f'MEMORY.md: {operator}',
+                   active_page='plans',
+                   operator=operator,
+                   slug='',
+                   memory_info=memory_info)
+
+
 # --- API endpoints -------------------------------------------------------
 @app.route('/api/health')
 def api_health():
-    return jsonify({'status': 'ok', 'phase': 1,
+    return jsonify({'status': 'ok', 'phase': 2,
                     'server': 'k8s-agent-tools',
                     'timestamp': datetime.now().isoformat()})
 
@@ -1047,6 +1537,21 @@ def api_operators():
     cfg = _load_config()
     repos = cfg.get('operator_repos', [])
     return jsonify(scan_operators(repos))
+
+
+@app.route('/api/plans')
+@login_required
+def api_plans():
+    plans_root = get_plans_root()
+    return jsonify(scan_plans(plans_root))
+
+
+@app.route('/api/plans/<operator>/<slug>/state')
+@login_required
+def api_plan_state(operator, slug):
+    plans_root = get_plans_root()
+    state = read_state_json(plans_root, operator)
+    return jsonify(state)
 
 
 # --- Main ----------------------------------------------------------------
