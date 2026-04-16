@@ -713,6 +713,184 @@ tr:hover td { background: var(--bg-tertiary); }
     margin-bottom: 24px;
     flex-wrap: wrap;
 }
+
+/* Demo Walk Through nav button */
+.btn-demo {
+    background: linear-gradient(135deg, #f0883e, #f5a623);
+    color: #000 !important;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 2px solid rgba(245,166,35,0.5);
+    box-shadow: 0 0 8px rgba(240,136,62,0.3);
+    animation: demo-glow 2s ease-in-out infinite;
+    text-decoration: none !important;
+}
+.btn-demo:hover {
+    background: linear-gradient(135deg, #f5a623, #f0883e);
+    box-shadow: 0 0 16px rgba(240,136,62,0.5);
+}
+@keyframes demo-glow {
+    0%, 100% { box-shadow: 0 0 8px rgba(240,136,62,0.3); }
+    50% { box-shadow: 0 0 16px rgba(240,136,62,0.6); }
+}
+
+/* Demo Walk Through page */
+.demo-page .step-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    transition: border-color 0.2s;
+}
+.demo-page .step-card:hover { border-color: var(--accent); }
+.demo-page .step-card .step-number {
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: var(--accent);
+    color: #000;
+    font-size: 14px;
+    font-weight: 800;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.demo-page .step-card h3 {
+    color: var(--accent);
+    margin-bottom: 8px;
+    padding-left: 20px;
+}
+.demo-page .step-card .step-phase {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    padding-left: 20px;
+}
+.demo-page .step-card .step-url {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--accent-light);
+    background: var(--bg-primary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 12px;
+}
+.demo-page .step-card .talk {
+    background: var(--bg-primary);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--text-secondary);
+    border-radius: 0 4px 4px 0;
+}
+.demo-page .step-actions {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0 0;
+}
+.demo-page .step-actions li {
+    padding: 4px 0 4px 16px;
+    font-size: 14px;
+    position: relative;
+}
+.demo-page .step-actions li:before {
+    content: '\\25B8';
+    color: var(--accent);
+    position: absolute;
+    left: 0;
+}
+.demo-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+.demo-header h1 {
+    font-size: 32px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+}
+.demo-header .subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+.demo-progress {
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    height: 6px;
+    margin-bottom: 32px;
+    overflow: hidden;
+}
+.demo-progress .fill {
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    height: 100%;
+    border-radius: 8px;
+    width: 0%;
+    transition: width 0.3s;
+}
+.btn-reset {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    color: #fff !important;
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    border: 2px solid rgba(231,76,60,0.5);
+    box-shadow: 0 0 8px rgba(231,76,60,0.3);
+    cursor: pointer;
+    text-decoration: none !important;
+}
+.btn-reset:hover {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    box-shadow: 0 0 16px rgba(231,76,60,0.5);
+}
+
+/* Demo: bold green call-to-action highlights */
+.demo-action {
+    color: #3fb950;
+    font-weight: 700;
+    background: rgba(63,185,80,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(63,185,80,0.25);
+}
+.demo-notice {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    line-height: 1.7;
+}
+.demo-notice .notice-icon {
+    font-size: 18px;
+    margin-right: 6px;
+}
+
+/* Demo: pre-filled input highlight */
+.demo-input {
+    background: rgba(63,185,80,0.08) !important;
+    border-color: rgba(63,185,80,0.4) !important;
+    color: #3fb950 !important;
+    font-weight: 600;
+}
 """
 
 # ---------------------------------------------------------------------------
@@ -787,8 +965,8 @@ HEADER_HTML = """
                 <a href="http://10.0.151.101:8086/dashboard">
                     &#x1f504; isdlc <span class="dd-hint">:8086</span>
                 </a>
-                <a href="http://10.0.151.101:5005/dashboard" class="active-server">
-                    &#x2699; k8s-agent-tools <span class="dd-hint">:5005</span>
+                <a href="http://10.0.151.101:8087/dashboard" class="active-server">
+                    &#x2699; k8s-agent-tools <span class="dd-hint">:8087</span>
                 </a>
                 <hr>
                 <a href="http://10.0.151.101:8084/dashboard">
@@ -799,6 +977,7 @@ HEADER_HTML = """
     </nav>
 
     <div class="header-right">
+        <a href="/demo" class="btn-demo">&#x1f3ac; Demo</a>
         {% if session.get('user') %}
             <span class="user-badge">&#x1f464; {{ session['user'] }}
                 {% if session.get('role') == 'admin' %} (admin){% endif %}
@@ -1955,8 +2134,11 @@ EXECUTE_TEMPLATE = """
             <p class="helper">Argument: <code>{{ sk.arg_name }}</code></p>
             <form method="POST" action="/execute/{{ sk.name }}">
                 <div style="display:flex; gap:8px">
-                    <input type="text" name="target_path" placeholder="/path/to/{{ sk.arg_name }}"
-                           style="flex:1; padding:8px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border); border-radius:4px">
+                    <input type="text" name="target_path"
+                           value="{{ demo_paths.get(sk.name, '') }}"
+                           placeholder="/path/to/{{ sk.arg_name }}"
+                           style="flex:1; padding:8px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border); border-radius:4px"
+                           {% if demo_paths.get(sk.name) %}class="demo-input"{% endif %}>
                     <button type="submit" class="btn btn-primary">Run</button>
                 </div>
             </form>
@@ -1969,7 +2151,7 @@ EXECUTE_TEMPLATE = """
     {% for sk in ai_skills %}
         <div class="skill-exec-card" style="opacity:0.6">
             <h3>{{ sk }}</h3>
-            <p style="color:var(--text-secondary)">Requires AI agent integration &mdash; coming in Phase 5</p>
+            <p style="color:var(--text-secondary)">Requires AI agent integration &mdash; run locally with Claude or Cursor</p>
             <button class="btn" disabled>AI Required</button>
         </div>
     {% endfor %}
@@ -2088,11 +2270,21 @@ EXECUTION_DETAIL_TEMPLATE = """
 @login_required
 def execute_page():
     skills = get_executable_skills()
+    sample_dir = str(Path(config.PLUGIN_PATH) / 'tests' / 'sample-operator')
+    sample_file = str(Path(config.PLUGIN_PATH) / 'tests' / 'sample-operator' / 'main.go')
+    demo_paths = {
+        'explain-flow': sample_dir,
+        'code-style': sample_file,
+        'debug-operator': sample_dir,
+        'test-operator': sample_dir,
+        'analyze-logs': sample_file,
+    }
     return _render(EXECUTE_TEMPLATE,
                    title='Execute Skills',
                    active_page='executions',
                    executable_skills=skills,
-                   ai_skills=AI_SKILLS)
+                   ai_skills=AI_SKILLS,
+                   demo_paths=demo_paths)
 
 
 @app.route('/execute/<skill>', methods=['POST'])
@@ -2910,11 +3102,14 @@ def analyze_logs_page():
 @login_required
 def analyze_flow_page():
     analysis = None
+    demo_default = str(Path(config.PLUGIN_PATH) / 'tests' / 'sample-operator')
     target_path = ''
     if request.method == 'POST':
         target_path = request.form.get('path', '').strip()
         if target_path:
             analysis = wrapper_analyze_code_flow(target_path, session.get('user', 'anonymous'))
+    else:
+        target_path = demo_default
     return _render(ANALYZE_FLOW_TEMPLATE,
                    title='Code Flow Analysis',
                    active_page='analyze',
@@ -2926,11 +3121,14 @@ def analyze_flow_page():
 @login_required
 def analyze_style_page():
     analysis = None
+    demo_default = str(Path(config.PLUGIN_PATH) / 'tests' / 'sample-operator' / 'main.go')
     target_path = ''
     if request.method == 'POST':
         target_path = request.form.get('path', '').strip()
         if target_path:
             analysis = wrapper_analyze_style(target_path, session.get('user', 'anonymous'))
+    else:
+        target_path = demo_default
     return _render(ANALYZE_STYLE_TEMPLATE,
                    title='Style Analysis',
                    active_page='analyze',
@@ -3393,6 +3591,251 @@ def operator_health(operator_name):
                    related_commits=related_commits,
                    related_gerrit=related_gerrit,
                    timeline=timeline)
+
+
+# --- Demo Walk Through ---------------------------------------------------
+
+DEMO_TEMPLATE = """
+<div class="container demo-page">
+    <div class="demo-header">
+        <h1>&#x1f3ac; Demo Walk Through</h1>
+        <p class="subtitle">OpenStack K8s Agent Tools &mdash; 7 Phases, Zero to Production</p>
+    </div>
+
+    <div class="demo-notice">
+        <p><span class="notice-icon">&#x1f4a1;</span>
+        <strong>Demo Mode:</strong> This demo server showcases all features of the OpenStack K8s Agent Tools product.
+        Throughout this walk through, look for <span class="demo-action">Seed Demo Data</span> buttons &mdash;
+        they pre-populate panels with realistic sample data so you can visualize the full workflow without any setup.
+        Execute and Analyze inputs are pre-filled with working paths &mdash; just click <span class="demo-action">Run</span> or
+        <span class="demo-action">Analyze</span> to see results instantly.</p>
+    </div>
+
+    <div class="demo-notice" style="border-color:rgba(243,156,18,0.4)">
+        <p><span class="notice-icon">&#x26a0;</span>
+        <strong>AI Skills:</strong> Five skills (<em>backport-review, code-review, feature, jira, task-executor</em>)
+        require AI agent integration and are <strong>not available in this demo environment</strong>.
+        Those skills are available for developers running locally within their Claude or Cursor runtime.
+        The 5 CLI-based skills are fully functional here and demonstrated below.</p>
+    </div>
+
+    <div class="action-row" style="justify-content:center; margin-bottom:32px">
+        <form method="POST" action="/api/demo/reset" onsubmit="return confirm('This will wipe all runtime data (executions, analyses, history, reports, cache, demo plans). User accounts are preserved. Continue?')">
+            <button type="submit" class="btn-reset">&#x1f504; Reset Demo</button>
+        </form>
+        <a href="/dashboard" class="btn btn-primary" style="padding:10px 24px">&#x1f4ca; Open Dashboard</a>
+    </div>
+
+    <div class="demo-progress"><div class="fill" id="demo-progress-fill"></div></div>
+
+    <div class="step-card">
+        <span class="step-number">1</span>
+        <p class="step-phase">Phase 1 &mdash; Core</p>
+        <h3>The Splash Page</h3>
+        <span class="step-url">/</span>
+        <ul class="step-actions">
+            <li>Open <a href="/">Home</a> &mdash; dark theme, orange/amber gradient</li>
+            <li>4 feature cards preview the product capabilities</li>
+            <li>Ecosystem &amp; Servers dropdowns show the full platform fleet</li>
+        </ul>
+        <div class="talk">"This is the entry point. One URL gives your team access to 10 AI skills, plan monitoring, execution history, external integrations, analysis tools, and trend reporting."</div>
+    </div>
+
+    <div class="step-card">
+        <span class="step-number">2</span>
+        <p class="step-phase">Phase 1 &mdash; Core</p>
+        <h3>Register and Log In</h3>
+        <span class="step-url">/register &rarr; /login</span>
+        <ul class="step-actions">
+            <li>Click <a href="/register">Register</a>, create an account</li>
+            <li><a href="/login">Log in</a> &mdash; redirected to Dashboard</li>
+        </ul>
+        <div class="talk">"Built-in authentication. Every user gets their own profile, operator repo configuration, and execution history."</div>
+    </div>
+
+    <div class="step-card">
+        <span class="step-number">3</span>
+        <p class="step-phase">Phase 1 + 2 + 3 + 6</p>
+        <h3>The Dashboard</h3>
+        <span class="step-url">/dashboard</span>
+        <ul class="step-actions">
+            <li>Open <a href="/dashboard">Dashboard</a> &mdash; stat cards for Operators, Skills, Plans, Executions, Analyses</li>
+            <li>Trend arrows compare today vs. yesterday</li>
+            <li>7-day mini bar chart for execution volume</li>
+            <li>Integration badges: Jira, GitHub, Gerrit</li>
+            <li>The Operator panel shows "Not found" for the example operators initially &mdash;
+                this dashboard will get its Operator status and columns filled in as we execute
+                more skills and analyses in the steps below</li>
+        </ul>
+        <div class="talk">"One screen tells you everything: what's running, what's trending up or down. Each stat links to its detail page. As we walk through the demo, you'll see these numbers come alive."</div>
+    </div>
+
+    <div class="step-card">
+        <span class="step-number">4</span>
+        <p class="step-phase">Phase 1 + 3 &mdash; Skills &amp; Execution</p>
+        <h3>Skill Catalog &amp; Execute Skills</h3>
+        <span class="step-url">/skills &rarr; /execute</span>
+        <ul class="step-actions">
+            <li>Open <a href="/skills">Skills</a> &mdash; 10 skill cards with tool badges and descriptions</li>
+            <li>Click any skill for full SKILL.md documentation</li>
+            <li>5 skills have <strong>Execute</strong> buttons (debug-operator, test-operator, code-style, analyze-logs, explain-flow)</li>
+            <li>5 skills (<em>backport-review, code-review, feature, jira, task-executor</em>) require AI agent integration &mdash;
+                those must be run locally on a developer machine with Claude or Cursor runtime configured</li>
+            <li>Open <a href="/execute">Execute</a> &mdash; each executable skill has a <strong>pre-filled demo path</strong> ready to go</li>
+            <li>Try <strong>explain-flow</strong>: the input is pre-filled with the sample operator directory &mdash;
+                just click <span class="demo-action">Run</span> to see the code parser output stream in real time</li>
+            <li>Try <strong>code-style</strong>: pre-filled with the sample operator path &mdash;
+                click <span class="demo-action">Run</span> to see style analysis results</li>
+            <li>Watch the real-time log viewer with auto-refresh as skills execute</li>
+            <li>Check <a href="/executions">Executions</a> for the persistent history of all runs</li>
+        </ul>
+        <div class="talk">"These are Francesco's 10 AI skills. Five run directly from the browser &mdash; the output streams in real time, no SSH needed. Every run is saved with full logs, duration, and exit codes. The other five require the AI runtime and are available for developers running locally."</div>
+    </div>
+
+    <div class="step-card">
+        <span class="step-number">5</span>
+        <p class="step-phase">Phase 2 &mdash; Plan Monitoring</p>
+        <h3>Plans and MEMORY.md</h3>
+        <span class="step-url">/plans</span>
+        <ul class="step-actions">
+            <li>Open <a href="/plans">Plans</a></li>
+            <li>Click <span class="demo-action">Seed Demo Data</span> to populate sample operator plans</li>
+            <li>Progress bars, status badges, grouped task checklists</li>
+            <li>Click a plan &rarr; see task completion &rarr; view MEMORY.md</li>
+        </ul>
+        <div class="talk">"The agent writes plan files to disk. This page monitors them in real time &mdash; progress bars, task checklists, and the agent's persistent memory of decisions and patterns."</div>
+    </div>
+
+    <div class="step-card">
+        <span class="step-number">6</span>
+        <p class="step-phase">Phase 4 &mdash; Team Portal</p>
+        <h3>Team Portal: Jira, GitHub, Gerrit</h3>
+        <span class="step-url">/team</span>
+        <ul class="step-actions">
+            <li>Open <a href="/team">Team</a></li>
+            <li>Click <span class="demo-action">Seed Demo Data</span> to populate Jira issues, GitHub PRs, and Gerrit reviews</li>
+            <li>Three summary cards &rarr; click into Jira, GitHub, Gerrit detail</li>
+            <li>Operator health cross-references data from all three sources</li>
+        </ul>
+        <div class="talk">"Instead of switching between Jira, GitHub, and Gerrit, everything is in one portal. Click an operator name and see its issues, PRs, and reviews side by side."</div>
+    </div>
+
+    <div class="step-card">
+        <span class="step-number">7</span>
+        <p class="step-phase">Phase 5 &mdash; Analysis</p>
+        <h3>Analysis Dashboards</h3>
+        <span class="step-url">/analyze/logs &middot; /analyze/code-flow &middot; /analyze/style</span>
+        <ul class="step-actions">
+            <li><a href="/analyze/logs">Log Analysis</a> &mdash; click <span class="demo-action">Load Demo</span>,
+                then click <span class="demo-action">Analyze</span> to see parsed errors, warnings, and info with severity badges</li>
+            <li><a href="/analyze/code-flow">Code Flow</a> &mdash; pre-filled with the sample operator directory;
+                click <span class="demo-action">Analyze</span> to see reconciler flows with color-coded step types</li>
+            <li><a href="/analyze/style">Style Analysis</a> &mdash; pre-filled with the sample Go file;
+                click <span class="demo-action">Analyze</span> to see style findings with severity and suggestions</li>
+            <li><a href="/analyze/history">History</a> &mdash; all past analyses saved with summary counts</li>
+        </ul>
+        <div class="talk">"We wrapped the plugin's CLI analysis tools in web UIs. Paste logs, point at code, get formatted results. Every analysis is saved &mdash; building a knowledge base of findings."</div>
+    </div>
+
+    <div class="step-card">
+        <span class="step-number">8</span>
+        <p class="step-phase">Phase 6 &mdash; History</p>
+        <h3>History and Reporting</h3>
+        <span class="step-url">/history &middot; /reports</span>
+        <ul class="step-actions">
+            <li>Open <a href="/history">History</a></li>
+            <li>Click <span class="demo-action">Seed Demo History</span> &mdash; instantly populates 7 days of
+                realistic activity data with execution counts, analyses, and pass rates</li>
+            <li>7-day trend bars appear showing daily volume at a glance</li>
+            <li>Click any day for the full breakdown: skills, analyses, pass rate, vs-previous comparison</li>
+            <li><a href="/reports">Reports</a> &mdash; click <span class="demo-action">Generate Daily Report</span>
+                or <span class="demo-action">Generate Weekly Report</span>, download as .md for sharing</li>
+        </ul>
+        <div class="talk">"How are we doing this week? Trend bars show the answer at a glance. Generate reports on demand and download as markdown for Slack or email."</div>
+    </div>
+
+    <div class="step-card">
+        <span class="step-number">9</span>
+        <p class="step-phase">Phase 7 &mdash; Production</p>
+        <h3>Deployment &amp; Developer Setup</h3>
+        <span class="step-url">http://10.0.151.101:8087/</span>
+        <ul class="step-actions">
+            <li>This version of the OpenStack K8s Agent Tools is <strong>temporarily hosted on a dedicated
+                node</strong> to provide a platform to demonstrate all key features of the SDLC</li>
+            <li>Everything running on this demo server is also <strong>available locally for developers</strong>
+                who fork the repo and run <code>./local_dev.sh</code></li>
+            <li>Production stack: Gunicorn + Apache reverse proxy + systemd auto-restart + daily backups</li>
+            <li>One-command deploy: <code>./deploy_to_runner.sh</code></li>
+            <li>Check <strong>Servers</strong> dropdown &mdash; joins 6 sibling servers on the same host</li>
+        </ul>
+        <div class="talk">"This server is temporarily hosted to demo the full SDLC. Developers can fork the repo and run it locally with one command. Same architecture as our other 6 servers &mdash; systemd, Apache, SELinux, automated backups."</div>
+    </div>
+
+    <div class="card" style="text-align:center; padding:32px; margin-top:24px; border-color:var(--accent)">
+        <h3 style="margin-bottom:12px">&#x1f389; Demo Complete</h3>
+        <p style="color:var(--text-secondary); margin-bottom:16px">
+            7 phases &middot; 56 routes &middot; 16 Python modules &middot; 5 deploy files
+        </p>
+        <p style="color:var(--text-secondary); margin-bottom:24px">
+            <strong>What's next:</strong> AI-backed skill execution (Cursor Background Agent API), cross-operator trend analysis, multi-environment deployment.
+        </p>
+        <div class="action-row" style="justify-content:center">
+            <a href="/dashboard" class="btn btn-primary" style="padding:10px 24px">Back to Dashboard</a>
+            <form method="POST" action="/api/demo/reset" onsubmit="return confirm('Reset all demo data?')">
+                <button type="submit" class="btn-reset">&#x1f504; Reset Demo</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var steps = document.querySelectorAll('.step-card');
+    var fill = document.getElementById('demo-progress-fill');
+    var observer = new IntersectionObserver(function(entries) {
+        var maxVisible = 0;
+        steps.forEach(function(step, i) {
+            var rect = step.getBoundingClientRect();
+            if (rect.top < window.innerHeight * 0.8) maxVisible = i + 1;
+        });
+        fill.style.width = Math.round((maxVisible / steps.length) * 100) + '%';
+    }, {threshold: 0.3});
+    steps.forEach(function(s) { observer.observe(s); });
+})();
+document.querySelectorAll('.demo-page a[href]').forEach(function(a) {
+    if (!a.closest('form') && a.getAttribute('href') !== '#') a.target = '_blank';
+});
+</script>
+"""
+
+
+@app.route('/demo')
+def demo_walkthrough():
+    return _render(DEMO_TEMPLATE,
+                   title='Demo Walk Through',
+                   active_page='demo')
+
+
+@app.route('/api/demo/reset', methods=['POST'])
+@login_required
+def api_demo_reset():
+    import shutil
+    cleared = []
+
+    for subdir in ['executions', 'analyses', 'history', 'reports', 'cache']:
+        target = config.DATA_ROOT / subdir
+        if target.exists():
+            shutil.rmtree(target)
+            target.mkdir(parents=True, exist_ok=True)
+            cleared.append(subdir)
+
+    plans_root = get_plans_root()
+    if plans_root.exists():
+        shutil.rmtree(plans_root)
+        cleared.append('plans')
+
+    flash('Demo reset complete. All runtime data cleared.', 'success')
+    return redirect('/demo')
 
 
 # --- API endpoints -------------------------------------------------------

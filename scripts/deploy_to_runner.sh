@@ -3,10 +3,38 @@ set -euo pipefail
 
 # K8s Agent Tools Server — Deploy to 10.0.151.101
 # Following the isdlc-server 9-step deploy pattern.
+#
+# Usage:
+#   ./deploy_to_runner.sh                # Full 9-step deploy
+#   ./deploy_to_runner.sh --code-only    # Quick code sync + restart (steps 1,3,4,9)
 
 REMOTE_HOST="ospng@10.0.151.101"
 SSH_KEY="$HOME/.ssh/id_rsa_omcgonag_runner"
 SSH_OPTS="-i $SSH_KEY"
+
+usage() {
+    echo "Usage: $(basename "$0") [OPTIONS]"
+    echo ""
+    echo "Deploy K8s Agent Tools Server to 10.0.151.101"
+    echo ""
+    echo "Options:"
+    echo "  --code-only    Quick deploy: sync code + restart (steps 1,3,4,9)"
+    echo "                 Skips venv, systemd, SELinux, and data seed"
+    echo "  -h, --help     Show this help message and exit"
+    echo ""
+    echo "Examples:"
+    echo "  $(basename "$0")              # Full 9-step deploy"
+    echo "  $(basename "$0") --code-only  # Quick code sync + restart"
+    exit 0
+}
+
+CODE_ONLY=false
+case "${1:-}" in
+    -h|--help) usage ;;
+    --code-only) CODE_ONLY=true ;;
+    "") ;;
+    *) echo "Unknown option: $1"; usage ;;
+esac
 REMOTE_BASE="/home/ospng/k8s-agent-tools-server"
 REMOTE_APP="$REMOTE_BASE/app"
 REMOTE_PLUGIN="$REMOTE_BASE/plugin"
@@ -23,6 +51,11 @@ echo "============================================"
 echo "  K8s Agent Tools Server -- Deploy"
 echo "  Target: $REMOTE_HOST"
 echo "  Remote: $REMOTE_BASE"
+if [ "$CODE_ONLY" = true ]; then
+    echo "  Mode: --code-only (sync code + restart)"
+else
+    echo "  Mode: full deploy (all 9 steps)"
+fi
 echo "============================================"
 echo
 
@@ -32,11 +65,13 @@ ssh $SSH_OPTS "$REMOTE_HOST" "sudo systemctl stop $SERVICE_NAME 2>/dev/null || t
 echo "  Done."
 echo
 
+if [ "$CODE_ONLY" = false ]; then
 # --- Step 2: Create remote directories ---
 echo "[Step 2/9] Creating remote directories..."
 ssh $SSH_OPTS "$REMOTE_HOST" "mkdir -p $REMOTE_APP $REMOTE_PLUGIN $REMOTE_DATA $REMOTE_BACKUPS"
 echo "  Done."
 echo
+fi
 
 # --- Step 3: rsync web_app/ code ---
 echo "[Step 3/9] Syncing application code..."
@@ -64,6 +99,7 @@ rsync -avz --delete -e "ssh $SSH_OPTS" \
 echo "  Done."
 echo
 
+if [ "$CODE_ONLY" = false ]; then
 # --- Step 5: Create/update venv + pip install ---
 echo "[Step 5/9] Setting up Python venv..."
 ssh $SSH_OPTS "$REMOTE_HOST" bash -s <<'VENV_EOF'
@@ -133,7 +169,7 @@ echo
 echo "[Step 8/9] Configuring SELinux and backup timer..."
 ssh $SSH_OPTS "$REMOTE_HOST" bash -s <<'SELINUX_EOF'
 sudo semanage port -a -t http_port_t -p tcp 8087 2>/dev/null || true
-sudo semanage port -a -t http_port_t -p tcp 5005 2>/dev/null || true
+sudo semanage port -a -t http_port_t -p tcp 5006 2>/dev/null || true
 sudo setsebool -P httpd_can_network_connect 1 2>/dev/null || true
 sudo chcon -Rt bin_t /home/ospng/k8s-agent-tools-server/venv/bin/ 2>/dev/null || true
 
@@ -142,6 +178,7 @@ sudo systemctl start k8s-agent-tools-server-backup.timer
 SELINUX_EOF
 echo "  Done."
 echo
+fi
 
 # --- Step 9: Start service + verify ---
 echo "[Step 9/9] Starting service and verifying..."
@@ -154,7 +191,7 @@ echo "  Service status:"
 sudo systemctl is-active k8s-agent-tools-server
 
 echo "  Health check (direct):"
-curl -sf http://127.0.0.1:5005/api/health || echo "  FAILED: direct health check"
+curl -sf http://127.0.0.1:5006/api/health || echo "  FAILED: direct health check"
 
 echo "  Health check (via Apache):"
 curl -sf http://10.0.151.101:8087/api/health || echo "  FAILED: Apache proxy health check"
