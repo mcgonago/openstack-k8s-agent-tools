@@ -22,6 +22,22 @@ from .skill_runner import (get_executable_skills, get_executable_skill_names,
                            get_execution_log, cancel_execution,
                            get_total_executions, AI_SKILLS)
 from .job_queue import queue as job_queue
+from .jira_client import (get_issues as jira_get_issues,
+                           get_counts as jira_get_counts,
+                           get_status as jira_get_status,
+                           get_demo_data as jira_get_demo,
+                           DEMO_ISSUES as JIRA_DEMO_ISSUES)
+from .github_client import (get_prs as github_get_prs,
+                             get_counts as github_get_counts,
+                             get_status as github_get_status,
+                             get_demo_data as github_get_demo,
+                             DEMO_PRS as GITHUB_DEMO_PRS,
+                             DEMO_COMMITS as GITHUB_DEMO_COMMITS)
+from .gerrit_client import (get_reviews as gerrit_get_reviews,
+                             get_counts as gerrit_get_counts,
+                             get_status as gerrit_get_status,
+                             get_demo_data as gerrit_get_demo,
+                             DEMO_REVIEWS as GERRIT_DEMO_REVIEWS)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('K8S_AGENT_TOOLS_SECRET',
@@ -195,6 +211,9 @@ a:hover { text-decoration: underline; }
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 16px;
+}
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;
 }
 
 /* Stats row */
@@ -490,6 +509,72 @@ tr:hover td { background: var(--bg-tertiary); }
     color: var(--text-secondary);
     font-family: monospace;
 }
+
+/* Phase 4: Integration badges */
+.integration-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+.integration-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.integration-badge.connected { background: rgba(39,174,96,0.15); color: #27ae60; }
+.integration-badge.demo { background: rgba(243,156,18,0.15); color: #f39c12; }
+.integration-badge.error { background: rgba(231,76,60,0.15); color: #e74c3c; }
+
+/* Phase 4: Team portal cards */
+.team-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+}
+.team-card h3 { color: var(--accent); margin-bottom: 12px; }
+.team-card .metric-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+}
+.team-card .metric-row:last-child { border-bottom: none; }
+
+/* Phase 4: Activity feed */
+.activity-feed { list-style: none; padding: 0; margin: 0; }
+.activity-feed li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    display: flex;
+    gap: 12px;
+}
+.activity-feed li:last-child { border-bottom: none; }
+.activity-feed .time { color: var(--text-secondary); min-width: 50px; font-family: monospace; }
+.activity-feed .source {
+    min-width: 60px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-align: center;
+    align-self: center;
+}
+.activity-feed .source.jira { background: rgba(0,82,204,0.2); color: #4c9aff; }
+.activity-feed .source.github { background: rgba(110,84,148,0.2); color: #b392f0; }
+.activity-feed .source.gerrit { background: rgba(39,174,96,0.2); color: #27ae60; }
+
+/* Phase 4: Vote badges */
+.vote-plus { color: #27ae60; font-weight: 700; }
+.vote-minus { color: #e74c3c; font-weight: 700; }
 """
 
 # ---------------------------------------------------------------------------
@@ -504,6 +589,7 @@ HEADER_HTML = """
         <a href="/skills" class="{{ 'active' if active_page == 'skills' else '' }}">Skills</a>
         <a href="/plans" class="{{ 'active' if active_page == 'plans' else '' }}">Plans</a>
         <a href="/executions" class="{{ 'active' if active_page == 'executions' else '' }}">Executions</a>
+        <a href="/team" class="{{ 'active' if active_page == 'team' else '' }}">Team</a>
 
         <div class="dropdown">
             <button>Ecosystem &#9662;</button>
@@ -600,7 +686,7 @@ BASE_TEMPLATE = """<!DOCTYPE html>
 {% endwith %}
 {{ content | safe }}
 <footer class="site-footer">
-    OpenStack K8s Agent Tools Server &mdash; Phase 3 &mdash; {{ now }}
+    OpenStack K8s Agent Tools Server &mdash; Phase 4 &mdash; {{ now }}
 </footer>
 </body>
 </html>"""
@@ -885,6 +971,18 @@ DASHBOARD_TEMPLATE = """
         </div>
     </div>
 
+    <div class="integration-row">
+        <span class="integration-badge {{ jira_status }}">
+            &#x1f4cb; Jira: {{ jira_status | title }}
+        </span>
+        <span class="integration-badge {{ github_status }}">
+            &#x1f4e6; GitHub: {{ github_status | title }}
+        </span>
+        <span class="integration-badge {{ gerrit_status }}">
+            &#x1f50d; Gerrit: {{ gerrit_status | title }}
+        </span>
+    </div>
+
     {% if recent_execs %}
     <div class="card" style="margin-top:24px">
         <h3 style="margin-bottom:12px">Recent Executions</h3>
@@ -992,6 +1090,10 @@ def dashboard():
     exec_total = get_total_executions()
     recent_execs = list_executions(limit=5)
 
+    j_status = jira_get_status()
+    gh_status = github_get_status()
+    ge_status = gerrit_get_status()
+
     return _render(DASHBOARD_TEMPLATE,
                    title='Dashboard',
                    active_page='dashboard',
@@ -1004,6 +1106,9 @@ def dashboard():
                    exec_running=exec_running,
                    exec_total=exec_total,
                    recent_execs=recent_execs,
+                   jira_status=j_status,
+                   github_status=gh_status,
+                   gerrit_status=ge_status,
                    plan_last_activity=plan_last)
 
 
@@ -1843,10 +1948,450 @@ def execution_cancel(exec_id):
     return redirect(f'/executions/{exec_id}')
 
 
+# --- Team portal (Phase 4) -----------------------------------------------
+TEAM_TEMPLATE = """
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
+        <h2>&#x1f465; Team Portal</h2>
+        <form method="POST" action="/team/seed-demo">
+            <button type="submit" class="btn btn-primary">&#x1f331; Seed Demo Data</button>
+        </form>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:24px">
+        <div class="team-card">
+            <h3>&#x1f4cb; Jira</h3>
+            <div class="metric-row"><span>Total Issues</span><span>{{ jira_counts.total }}</span></div>
+            <div class="metric-row"><span>In Progress</span><span>{{ jira_counts.in_progress }}</span></div>
+            <div class="metric-row"><span>Blocked</span><span style="color:#e74c3c">{{ jira_counts.blocked }}</span></div>
+            <div class="metric-row"><span>Done</span><span style="color:#27ae60">{{ jira_counts.done }}</span></div>
+            <div style="margin-top:12px"><a href="/team/jira" class="btn btn-sm">View Details &rarr;</a></div>
+        </div>
+        <div class="team-card">
+            <h3>&#x1f4e6; GitHub</h3>
+            <div class="metric-row"><span>Open PRs</span><span>{{ github_counts.open_prs }}</span></div>
+            <div class="metric-row"><span>Merged This Week</span><span>{{ github_counts.merged_week }}</span></div>
+            <div class="metric-row"><span>Commits (7d)</span><span>{{ github_counts.total_commits }}</span></div>
+            <div class="metric-row"><span>Repos</span><span>{{ github_counts.repos }}</span></div>
+            <div style="margin-top:12px"><a href="/team/github" class="btn btn-sm">View Details &rarr;</a></div>
+        </div>
+        <div class="team-card">
+            <h3>&#x1f50d; Gerrit</h3>
+            <div class="metric-row"><span>Open Reviews</span><span>{{ gerrit_counts.open }}</span></div>
+            <div class="metric-row"><span>Merged</span><span style="color:#27ae60">{{ gerrit_counts.merged }}</span></div>
+            <div class="metric-row"><span>WIP</span><span>{{ gerrit_counts.wip }}</span></div>
+            <div class="metric-row"><span>Has +2</span><span>{{ gerrit_counts.plus_two }}</span></div>
+            <div style="margin-top:12px"><a href="/team/gerrit" class="btn btn-sm">View Details &rarr;</a></div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+        <h3 style="margin-bottom:12px">Integration Status</h3>
+        <div class="integration-row">
+            <span class="integration-badge {{ jira_status }}">
+                &#x1f4cb; Jira: {{ jira_status | title }}
+                {% if jira_status == 'connected' %} ({{ jira_project }}){% endif %}
+            </span>
+            <span class="integration-badge {{ github_status }}">
+                &#x1f4e6; GitHub: {{ github_status | title }}
+            </span>
+            <span class="integration-badge {{ gerrit_status }}">
+                &#x1f50d; Gerrit: {{ gerrit_status | title }}
+            </span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom:12px">Recent Activity</h3>
+        {% if activity %}
+        <ul class="activity-feed">
+        {% for item in activity[:10] %}
+            <li>
+                <span class="time">{{ item.time }}</span>
+                <span class="source {{ item.source }}">{{ item.source }}</span>
+                <span>{{ item.text }}</span>
+            </li>
+        {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:var(--text-secondary)">No recent activity. Click "Seed Demo Data" to get started.</p>
+        {% endif %}
+    </div>
+</div>
+"""
+
+TEAM_JIRA_TEMPLATE = """
+<div class="container">
+    <p style="margin-bottom:16px"><a href="/team">&larr; Back to Team Portal</a></p>
+    <h2 style="margin-bottom:24px">&#x1f4cb; Jira Issues
+        <span class="integration-badge {{ jira_status }}" style="margin-left:8px; font-size:12px">{{ jira_status | title }}</span>
+    </h2>
+
+    {% if issues %}
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>Key</th><th>Summary</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Updated</th></tr>
+            </thead>
+            <tbody>
+            {% for i in issues %}
+                <tr>
+                    <td><a href="{{ i.url }}"><strong>{{ i.key }}</strong></a></td>
+                    <td>{{ i.summary }}</td>
+                    <td>
+                        {% if i.status == 'Done' or i.status == 'Closed' or i.status == 'Resolved' %}
+                            <span class="badge badge-ok">{{ i.status }}</span>
+                        {% elif i.status == 'In Progress' or i.status == 'In Review' %}
+                            <span class="badge badge-active">{{ i.status }}</span>
+                        {% elif i.status == 'Blocked' %}
+                            <span class="badge badge-err">{{ i.status }}</span>
+                        {% else %}
+                            <span class="badge">{{ i.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if i.priority == 'Critical' %}<span style="color:#e74c3c; font-weight:700">{{ i.priority }}</span>
+                        {% elif i.priority == 'High' %}<span style="color:#f39c12; font-weight:600">{{ i.priority }}</span>
+                        {% else %}{{ i.priority }}{% endif %}
+                    </td>
+                    <td>{{ i.assignee }}</td>
+                    <td style="font-size:13px; color:var(--text-secondary)">{{ i.updated[:10] if i.updated else '-' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center; padding:48px">
+        <p style="color:var(--text-secondary)">No Jira data available. Go to <a href="/team">Team Portal</a> and click "Seed Demo Data".</p>
+    </div>
+    {% endif %}
+</div>
+"""
+
+TEAM_GITHUB_TEMPLATE = """
+<div class="container">
+    <p style="margin-bottom:16px"><a href="/team">&larr; Back to Team Portal</a></p>
+    <h2 style="margin-bottom:24px">&#x1f4e6; GitHub
+        <span class="integration-badge {{ github_status }}" style="margin-left:8px; font-size:12px">{{ github_status | title }}</span>
+    </h2>
+
+    <div class="card" style="margin-bottom:24px">
+        <h3 style="margin-bottom:12px">Pull Requests</h3>
+        {% if prs %}
+        <table>
+            <thead>
+                <tr><th>#</th><th>Title</th><th>Author</th><th>Repo</th><th>Created</th><th>Reviews</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for p in prs %}
+                <tr>
+                    <td><a href="{{ p.url }}">#{{ p.number }}</a></td>
+                    <td>
+                        {{ p.title }}
+                        {% if p.draft %}<span class="badge" style="background:#555; font-size:10px; margin-left:4px">Draft</span>{% endif %}
+                    </td>
+                    <td>{{ p.author }}</td>
+                    <td><code>{{ p.repo }}</code></td>
+                    <td style="font-size:13px; color:var(--text-secondary)">{{ p.created[:10] if p.created else '-' }}</td>
+                    <td>{{ p.reviews }}</td>
+                    <td>
+                        {% if p.state == 'merged' %}<span class="badge badge-ok">Merged</span>
+                        {% elif p.state == 'open' %}<span class="badge badge-active">Open</span>
+                        {% else %}<span class="badge">{{ p.state }}</span>{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color:var(--text-secondary)">No PRs available.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom:12px">Recent Commits (7 days)</h3>
+        {% if commits %}
+        <table>
+            <thead>
+                <tr><th>SHA</th><th>Message</th><th>Author</th><th>Date</th><th>Repo</th></tr>
+            </thead>
+            <tbody>
+            {% for c in commits %}
+                <tr>
+                    <td><a href="{{ c.url }}"><code>{{ c.sha }}</code></a></td>
+                    <td>{{ c.message | truncate(60) }}</td>
+                    <td>{{ c.author }}</td>
+                    <td style="font-size:13px; color:var(--text-secondary)">{{ c.date[:10] if c.date else '-' }}</td>
+                    <td><code>{{ c.repo }}</code></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color:var(--text-secondary)">No commits available.</p>
+        {% endif %}
+    </div>
+</div>
+"""
+
+TEAM_GERRIT_TEMPLATE = """
+<div class="container">
+    <p style="margin-bottom:16px"><a href="/team">&larr; Back to Team Portal</a></p>
+    <h2 style="margin-bottom:24px">&#x1f50d; Gerrit Reviews
+        <span class="integration-badge {{ gerrit_status }}" style="margin-left:8px; font-size:12px">{{ gerrit_status | title }}</span>
+    </h2>
+
+    {% if reviews %}
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Subject</th><th>Project</th><th>Owner</th><th>Updated</th><th>Votes</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+            {% for r in reviews %}
+                <tr>
+                    <td><a href="{{ r.url }}">{{ r.number }}</a></td>
+                    <td>{{ r.subject }}</td>
+                    <td><code>{{ r.project.split('/')[-1] if '/' in r.project else r.project }}</code></td>
+                    <td>{{ r.owner }}</td>
+                    <td style="font-size:13px; color:var(--text-secondary)">{{ r.updated[:10] if r.updated else '-' }}</td>
+                    <td>
+                        {% if r.votes.get('+2', 0) > 0 %}<span class="vote-plus">+2:{{ r.votes['+2'] }}</span> {% endif %}
+                        {% if r.votes.get('+1', 0) > 0 %}<span class="vote-plus">+1:{{ r.votes['+1'] }}</span> {% endif %}
+                        {% if r.votes.get('-1', 0) > 0 %}<span class="vote-minus">-1:{{ r.votes['-1'] }}</span> {% endif %}
+                        {% if r.votes.get('-2', 0) > 0 %}<span class="vote-minus">-2:{{ r.votes['-2'] }}</span> {% endif %}
+                        {% if not r.votes.get('+2') and not r.votes.get('+1') and not r.votes.get('-1') and not r.votes.get('-2') %}-{% endif %}
+                    </td>
+                    <td>
+                        {% if r.status == 'MERGED' %}<span class="badge badge-ok">Merged</span>
+                        {% elif r.status == 'NEW' %}<span class="badge badge-active">Open</span>
+                        {% elif r.status == 'WIP' %}<span class="badge badge-accent">WIP</span>
+                        {% elif r.status == 'ABANDONED' %}<span class="badge badge-err">Abandoned</span>
+                        {% else %}<span class="badge">{{ r.status }}</span>{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center; padding:48px">
+        <p style="color:var(--text-secondary)">No Gerrit reviews available. Go to <a href="/team">Team Portal</a> and click "Seed Demo Data".</p>
+    </div>
+    {% endif %}
+</div>
+"""
+
+OPERATOR_HEALTH_TEMPLATE = """
+<div class="container">
+    <p style="margin-bottom:16px"><a href="/team">&larr; Back to Team Portal</a></p>
+    <h2 style="margin-bottom:24px">&#x1f3e5; Operator Health: {{ operator_name }}</h2>
+
+    <div class="grid-3" style="margin-bottom:24px">
+        <div class="team-card">
+            <h3>&#x2699; Operator Status</h3>
+            {% if operator_info %}
+            <div class="metric-row"><span>Status</span>
+                <span>{% if operator_info.status == 'ok' %}<span class="badge badge-ok">OK</span>{% else %}<span class="badge badge-err">Not Found</span>{% endif %}</span>
+            </div>
+            <div class="metric-row"><span>Controllers</span><span>{{ operator_info.controllers }}</span></div>
+            <div class="metric-row"><span>CRDs</span><span>{{ operator_info.crds }}</span></div>
+            <div class="metric-row"><span>Branch</span><span>{{ operator_info.branch or '-' }}</span></div>
+            {% else %}
+            <p style="color:var(--text-secondary)">Operator not in scanned repos.</p>
+            {% endif %}
+        </div>
+        <div class="team-card">
+            <h3>&#x1f4cb; Jira Issues</h3>
+            <div class="metric-row"><span>Related Issues</span><span>{{ related_jira | length }}</span></div>
+            {% for i in related_jira[:3] %}
+            <div class="metric-row"><span>{{ i.key }}</span><span class="badge {% if i.status == 'Blocked' %}badge-err{% elif i.status == 'In Progress' %}badge-active{% elif i.status == 'Done' %}badge-ok{% endif %}">{{ i.status }}</span></div>
+            {% endfor %}
+            {% if related_jira | length > 3 %}
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:4px">+{{ related_jira | length - 3 }} more</div>
+            {% endif %}
+        </div>
+        <div class="team-card">
+            <h3>&#x1f4e6; Code Activity</h3>
+            <div class="metric-row"><span>Open PRs</span><span>{{ related_prs | length }}</span></div>
+            <div class="metric-row"><span>Commits (7d)</span><span>{{ related_commits | length }}</span></div>
+            <div class="metric-row"><span>Gerrit Reviews</span><span>{{ related_gerrit | length }}</span></div>
+        </div>
+    </div>
+
+    {% if timeline %}
+    <div class="card">
+        <h3 style="margin-bottom:12px">Timeline (last 7 days)</h3>
+        <ul class="activity-feed">
+        {% for item in timeline[:15] %}
+            <li>
+                <span class="time">{{ item.time }}</span>
+                <span class="source {{ item.source }}">{{ item.source }}</span>
+                <span>{{ item.text }}</span>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+"""
+
+
+def _build_activity_feed(jira_data, github_data, gerrit_data):
+    """Cross-source activity feed."""
+    items = []
+    for i in jira_data.get('issues', []):
+        items.append({
+            'time': (i.get('updated', '')[:5] if 'T' in i.get('updated', '') else i.get('updated', '')[:10]),
+            'source': 'jira',
+            'text': f'{i["key"]} — {i["summary"][:60]} ({i["status"]})',
+            'sort_key': i.get('updated', ''),
+        })
+    for p in github_data.get('prs', []):
+        items.append({
+            'time': (p.get('updated', '')[:5] if 'T' in p.get('updated', '') else p.get('updated', '')[:10]),
+            'source': 'github',
+            'text': f'PR #{p["number"]} {p["state"]}: {p["title"][:50]}',
+            'sort_key': p.get('updated', ''),
+        })
+    for c in github_data.get('commits', [])[:5]:
+        items.append({
+            'time': (c.get('date', '')[:5] if 'T' in c.get('date', '') else c.get('date', '')[:10]),
+            'source': 'github',
+            'text': f'{c["sha"]} {c["message"][:50]}',
+            'sort_key': c.get('date', ''),
+        })
+    for r in gerrit_data.get('reviews', []):
+        items.append({
+            'time': (r.get('updated', '')[:5] if 'T' in r.get('updated', '') else r.get('updated', '')[:10]),
+            'source': 'gerrit',
+            'text': f'Change {r["number"]}: {r["subject"][:50]} ({r["status"]})',
+            'sort_key': r.get('updated', ''),
+        })
+    items.sort(key=lambda x: x.get('sort_key', ''), reverse=True)
+    return items
+
+
+@app.route('/team')
+@login_required
+def team_portal():
+    jira_data = jira_get_issues()
+    github_data = github_get_prs()
+    gerrit_data = gerrit_get_reviews()
+    activity = _build_activity_feed(jira_data, github_data, gerrit_data)
+    return _render(TEAM_TEMPLATE,
+                   title='Team Portal',
+                   active_page='team',
+                   jira_counts=jira_get_counts(jira_data),
+                   github_counts=github_get_counts(github_data),
+                   gerrit_counts=gerrit_get_counts(gerrit_data),
+                   jira_status=jira_get_status(),
+                   github_status=github_get_status(),
+                   gerrit_status=gerrit_get_status(),
+                   jira_project=config.JIRA_PROJECT,
+                   activity=activity)
+
+
+@app.route('/team/seed-demo', methods=['POST'])
+@login_required
+def team_seed_demo():
+    from . import jira_client, github_client, gerrit_client
+    jira_client._write_cache(jira_client.get_demo_data())
+    github_client._write_cache(github_client.get_demo_data())
+    gerrit_client._write_cache(gerrit_client.get_demo_data())
+    flash('Demo data seeded for Jira, GitHub, and Gerrit', 'success')
+    return redirect(url_for('team_portal'))
+
+
+@app.route('/team/jira')
+@login_required
+def team_jira():
+    data = jira_get_issues()
+    return _render(TEAM_JIRA_TEMPLATE,
+                   title='Jira Issues',
+                   active_page='team',
+                   issues=data.get('issues', []),
+                   jira_status=jira_get_status())
+
+
+@app.route('/team/github')
+@login_required
+def team_github():
+    data = github_get_prs()
+    return _render(TEAM_GITHUB_TEMPLATE,
+                   title='GitHub',
+                   active_page='team',
+                   prs=data.get('prs', []),
+                   commits=data.get('commits', []),
+                   github_status=github_get_status())
+
+
+@app.route('/team/gerrit')
+@login_required
+def team_gerrit():
+    data = gerrit_get_reviews()
+    return _render(TEAM_GERRIT_TEMPLATE,
+                   title='Gerrit Reviews',
+                   active_page='team',
+                   reviews=data.get('reviews', []),
+                   gerrit_status=gerrit_get_status())
+
+
+@app.route('/team/<operator_name>/health')
+@login_required
+def operator_health(operator_name):
+    cfg = _load_config()
+    repos = cfg.get('operator_repos', [])
+    operators = scan_operators(repos)
+    operator_info = None
+    for op in operators:
+        if op['name'] == operator_name:
+            operator_info = op
+            break
+
+    jira_data = jira_get_issues()
+    github_data = github_get_prs()
+    gerrit_data = gerrit_get_reviews()
+
+    related_jira = [i for i in jira_data.get('issues', [])
+                    if operator_name in ' '.join(i.get('labels', [])) or
+                    operator_name.replace('-', ' ') in i.get('summary', '').lower()]
+    related_prs = [p for p in github_data.get('prs', [])
+                   if operator_name in p.get('repo', '')]
+    related_commits = [c for c in github_data.get('commits', [])
+                       if operator_name in c.get('repo', '')]
+    related_gerrit = [r for r in gerrit_data.get('reviews', [])
+                      if operator_name in r.get('project', '')]
+
+    timeline = []
+    for i in related_jira:
+        timeline.append({'time': i.get('updated', '')[:10], 'source': 'jira',
+                         'text': f'{i["key"]} {i["status"]}: {i["summary"][:50]}'})
+    for p in related_prs:
+        timeline.append({'time': p.get('updated', '')[:10], 'source': 'github',
+                         'text': f'PR #{p["number"]} {p["state"]}: {p["title"][:50]}'})
+    for r in related_gerrit:
+        timeline.append({'time': r.get('updated', '')[:10], 'source': 'gerrit',
+                         'text': f'Change {r["number"]}: {r["subject"][:50]}'})
+    timeline.sort(key=lambda x: x.get('time', ''), reverse=True)
+
+    return _render(OPERATOR_HEALTH_TEMPLATE,
+                   title=f'Health: {operator_name}',
+                   active_page='team',
+                   operator_name=operator_name,
+                   operator_info=operator_info,
+                   related_jira=related_jira,
+                   related_prs=related_prs,
+                   related_commits=related_commits,
+                   related_gerrit=related_gerrit,
+                   timeline=timeline)
+
+
 # --- API endpoints -------------------------------------------------------
 @app.route('/api/health')
 def api_health():
-    return jsonify({'status': 'ok', 'phase': 3,
+    return jsonify({'status': 'ok', 'phase': 4,
                     'server': 'k8s-agent-tools',
                     'timestamp': datetime.now().isoformat()})
 
@@ -1912,6 +2457,27 @@ def api_execution(exec_id):
 def api_execution_log(exec_id):
     log = get_execution_log(exec_id)
     return jsonify({'exec_id': exec_id, 'log': log})
+
+
+@app.route('/api/jira/<project>')
+@login_required
+def api_jira(project):
+    data = jira_get_issues(project)
+    return jsonify(data)
+
+
+@app.route('/api/github/prs')
+@login_required
+def api_github_prs():
+    data = github_get_prs()
+    return jsonify(data)
+
+
+@app.route('/api/gerrit/reviews')
+@login_required
+def api_gerrit_reviews():
+    data = gerrit_get_reviews()
+    return jsonify(data)
 
 
 # --- Main ----------------------------------------------------------------

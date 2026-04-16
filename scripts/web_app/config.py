@@ -28,3 +28,16 @@ MAX_CONCURRENT_EXECUTIONS = int(os.environ.get(
     'K8S_AGENT_TOOLS_MAX_WORKERS', '3'))
 EXECUTION_TIMEOUT = int(os.environ.get(
     'K8S_AGENT_TOOLS_EXEC_TIMEOUT', '300'))
+
+JIRA_URL = os.environ.get('JIRA_URL', 'https://issues.redhat.com')
+JIRA_TOKEN = os.environ.get('JIRA_TOKEN', '')
+JIRA_PROJECT = os.environ.get('JIRA_PROJECT', 'OSPRH')
+
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
+GITHUB_REPOS_STR = os.environ.get('GITHUB_REPOS', '')
+
+GERRIT_URL = 'https://review.opendev.org'
+GERRIT_QUERY = os.environ.get('GERRIT_QUERY', 'project:openstack/ status:open')
+
+INTEGRATION_CACHE_TTL = int(os.environ.get(
+    'K8S_AGENT_TOOLS_CACHE_TTL', '600'))
