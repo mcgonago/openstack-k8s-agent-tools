@@ -22,3 +22,9 @@ PLANS_ROOT = os.environ.get(
     'K8S_AGENT_TOOLS_PLANS_ROOT',
     str(Path.home() / '.openstack-k8s-agents-plans')
 )
+
+EXECUTIONS_DIR = DATA_ROOT / 'executions'
+MAX_CONCURRENT_EXECUTIONS = int(os.environ.get(
+    'K8S_AGENT_TOOLS_MAX_WORKERS', '3'))
+EXECUTION_TIMEOUT = int(os.environ.get(
+    'K8S_AGENT_TOOLS_EXEC_TIMEOUT', '300'))

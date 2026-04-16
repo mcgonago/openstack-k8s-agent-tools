@@ -17,6 +17,11 @@ from .plan_monitor import (scan_plans, get_operator_plans, parse_plan_tasks,
                            read_memory, read_state_json,
                            compute_aggregate_progress, get_last_activity_ago,
                            seed_demo_data, get_plans_root)
+from .skill_runner import (get_executable_skills, get_executable_skill_names,
+                           run_skill, get_execution, list_executions,
+                           get_execution_log, cancel_execution,
+                           get_total_executions, AI_SKILLS)
+from .job_queue import queue as job_queue
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('K8S_AGENT_TOOLS_SECRET',
@@ -443,6 +448,48 @@ tr:hover td { background: var(--bg-tertiary); }
     overflow-y: auto;
     font-family: monospace;
 }
+
+/* Phase 3: Log viewer */
+.log-viewer {
+    background: #000;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    padding: 16px;
+    border-radius: 6px;
+    max-height: 500px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+/* Phase 3: Execution meta */
+.exec-meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 16px;
+    font-size: 14px;
+}
+.exec-meta dt { color: var(--text-secondary); font-weight: 600; }
+.exec-meta dd { color: var(--text-primary); margin: 0; }
+
+/* Phase 3: Skill execute cards */
+.skill-exec-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.skill-exec-card h3 { color: var(--accent); margin: 0; }
+.skill-exec-card .helper {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: monospace;
+}
 """
 
 # ---------------------------------------------------------------------------
@@ -456,6 +503,7 @@ HEADER_HTML = """
         <a href="/dashboard" class="{{ 'active' if active_page == 'dashboard' else '' }}">Dashboard</a>
         <a href="/skills" class="{{ 'active' if active_page == 'skills' else '' }}">Skills</a>
         <a href="/plans" class="{{ 'active' if active_page == 'plans' else '' }}">Plans</a>
+        <a href="/executions" class="{{ 'active' if active_page == 'executions' else '' }}">Executions</a>
 
         <div class="dropdown">
             <button>Ecosystem &#9662;</button>
@@ -552,7 +600,7 @@ BASE_TEMPLATE = """<!DOCTYPE html>
 {% endwith %}
 {{ content | safe }}
 <footer class="site-footer">
-    OpenStack K8s Agent Tools Server &mdash; Phase 2 &mdash; {{ now }}
+    OpenStack K8s Agent Tools Server &mdash; Phase 3 &mdash; {{ now }}
 </footer>
 </body>
 </html>"""
@@ -827,7 +875,47 @@ DASHBOARD_TEMPLATE = """
             <span class="stat-value" style="font-size:20px">{{ plan_last_activity }}</span>
             <span class="stat-label">Last Activity</span>
         </div>
+        <div class="stat-card">
+            <span class="stat-value {{ 'pulse' if exec_running > 0 else '' }}">{{ exec_running }}</span>
+            <span class="stat-label">Running</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ exec_total }}</span>
+            <span class="stat-label">Total Runs</span>
+        </div>
     </div>
+
+    {% if recent_execs %}
+    <div class="card" style="margin-top:24px">
+        <h3 style="margin-bottom:12px">Recent Executions</h3>
+        <table>
+            <thead>
+                <tr><th>ID</th><th>Skill</th><th>Target</th><th>Status</th><th>Duration</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for ex in recent_execs[:5] %}
+                <tr>
+                    <td><code>{{ ex.short_id }}</code></td>
+                    <td>{{ ex.skill }}</td>
+                    <td>{{ ex.target_name }}</td>
+                    <td>
+                        {% if ex.status == 'completed' %}<span class="badge badge-ok">Completed</span>
+                        {% elif ex.status == 'running' %}<span class="badge badge-active">Running</span>
+                        {% elif ex.status == 'failed' %}<span class="badge badge-err">Failed</span>
+                        {% elif ex.status == 'cancelled' %}<span class="badge" style="background:#555">Cancelled</span>
+                        {% else %}<span class="badge">{{ ex.status }}</span>{% endif %}
+                    </td>
+                    <td>{{ ex.duration }}</td>
+                    <td><a href="/executions/{{ ex.id }}" class="btn btn-sm">View</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% if recent_execs | length > 5 %}
+        <div style="text-align:center; margin-top:8px"><a href="/executions" class="btn btn-sm">See All</a></div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     {% if operators %}
     <div class="card">
@@ -900,6 +988,10 @@ def dashboard():
     agg = compute_aggregate_progress(plans_root)
     plan_last = get_last_activity_ago(plans_root)
 
+    exec_running = job_queue.get_active_count()
+    exec_total = get_total_executions()
+    recent_execs = list_executions(limit=5)
+
     return _render(DASHBOARD_TEMPLATE,
                    title='Dashboard',
                    active_page='dashboard',
@@ -909,6 +1001,9 @@ def dashboard():
                    plan_active=plan_active,
                    plan_done=agg['done'],
                    plan_total=agg['total'],
+                   exec_running=exec_running,
+                   exec_total=exec_total,
+                   recent_execs=recent_execs,
                    plan_last_activity=plan_last)
 
 
@@ -969,6 +1064,11 @@ SKILLS_TEMPLATE = """
             {% if s.summary %}
             <p style="font-size:13px; margin-top:8px">{{ s.summary | truncate(200) }}</p>
             {% endif %}
+            {% if s.name in executable_skills %}
+            <a href="/execute" class="btn btn-sm btn-primary" style="margin-top:8px">&#x26a1; Execute</a>
+            {% else %}
+            <span class="badge" style="margin-top:8px; background:#555; font-size:11px">AI Required</span>
+            {% endif %}
         </div>
     {% endfor %}
     </div>
@@ -995,7 +1095,8 @@ def skills():
                    title='Skills',
                    active_page='skills',
                    catalog=catalog,
-                   plugin_path=config.PLUGIN_PATH)
+                   plugin_path=config.PLUGIN_PATH,
+                   executable_skills=get_executable_skill_names())
 
 
 # --- Skill detail -------------------------------------------------------
@@ -1026,6 +1127,21 @@ SKILL_DETAIL_TEMPLATE = """
         </div>
         {% endif %}
 
+        {% if skill.name in executable_skills %}
+        <div style="margin-top:16px; margin-bottom:16px; padding:16px; background:var(--bg-tertiary); border-radius:6px">
+            <h3 style="margin-bottom:8px">&#x26a1; Execute This Skill</h3>
+            <form method="POST" action="/execute/{{ skill.name }}" style="display:flex; gap:8px">
+                <input type="text" name="target_path" placeholder="/path/to/target"
+                       style="flex:1; padding:8px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border); border-radius:4px">
+                <button type="submit" class="btn btn-primary">Run</button>
+            </form>
+        </div>
+        {% else %}
+        <div style="margin-top:16px; padding:12px; background:var(--bg-tertiary); border-radius:6px; color:var(--text-secondary); font-size:13px">
+            This skill requires AI agent integration (Phase 5).
+        </div>
+        {% endif %}
+
         <h3 style="margin-top:16px; margin-bottom:8px">SKILL.md Content</h3>
         <div class="skill-body">{{ skill.body }}</div>
     </div>
@@ -1041,7 +1157,8 @@ def skill_detail(name):
     return _render(SKILL_DETAIL_TEMPLATE,
                    title=f'Skill: {name}',
                    active_page='skills',
-                   skill=skill)
+                   skill=skill,
+                   executable_skills=get_executable_skill_names())
 
 
 # --- Config page --------------------------------------------------------
@@ -1519,10 +1636,217 @@ def operator_memory(operator):
                    memory_info=memory_info)
 
 
+# --- Execution pages (Phase 3) -------------------------------------------
+EXECUTE_TEMPLATE = """
+<div class="container">
+    <h2 style="margin-bottom:24px">&#x26a1; Execute Skills</h2>
+    <div class="grid-2">
+    {% for sk in executable_skills %}
+        <div class="skill-exec-card">
+            <h3>{{ sk.name }}</h3>
+            <p>{{ sk.description }}</p>
+            <p class="helper">Argument: <code>{{ sk.arg_name }}</code></p>
+            <form method="POST" action="/execute/{{ sk.name }}">
+                <div style="display:flex; gap:8px">
+                    <input type="text" name="target_path" placeholder="/path/to/{{ sk.arg_name }}"
+                           style="flex:1; padding:8px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border); border-radius:4px">
+                    <button type="submit" class="btn btn-primary">Run</button>
+                </div>
+            </form>
+        </div>
+    {% endfor %}
+    </div>
+    {% if ai_skills %}
+    <h3 style="margin-top:32px; margin-bottom:16px; color:var(--text-secondary)">AI-Required Skills (Phase 5)</h3>
+    <div class="grid-2">
+    {% for sk in ai_skills %}
+        <div class="skill-exec-card" style="opacity:0.6">
+            <h3>{{ sk }}</h3>
+            <p style="color:var(--text-secondary)">Requires AI agent integration &mdash; coming in Phase 5</p>
+            <button class="btn" disabled>AI Required</button>
+        </div>
+    {% endfor %}
+    </div>
+    {% endif %}
+</div>
+"""
+
+EXECUTIONS_LIST_TEMPLATE = """
+<div class="container">
+    <h2 style="margin-bottom:24px">&#x1f4dc; Execution History</h2>
+    <div style="margin-bottom:16px">
+        <a href="/execute" class="btn btn-primary">&#x26a1; Execute Skill</a>
+    </div>
+    {% if executions %}
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>ID</th><th>Skill</th><th>Target</th><th>User</th><th>Status</th><th>Duration</th><th>Started</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for ex in executions %}
+                <tr>
+                    <td><code>{{ ex.short_id }}</code></td>
+                    <td>{{ ex.skill }}</td>
+                    <td>{{ ex.target_name }}</td>
+                    <td>{{ ex.user }}</td>
+                    <td>
+                        {% if ex.status == 'completed' %}<span class="badge badge-ok">Completed</span>
+                        {% elif ex.status == 'running' %}<span class="badge badge-active">Running</span>
+                        {% elif ex.status == 'failed' %}<span class="badge badge-err">Failed</span>
+                        {% elif ex.status == 'cancelled' %}<span class="badge" style="background:#555">Cancelled</span>
+                        {% else %}<span class="badge">{{ ex.status }}</span>{% endif %}
+                    </td>
+                    <td>{{ ex.duration }}</td>
+                    <td>{{ ex.started_at or '-' }}</td>
+                    <td><a href="/executions/{{ ex.id }}" class="btn btn-sm">View</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center; padding:48px">
+        <p style="color:var(--text-secondary); margin-bottom:16px">No executions yet.</p>
+        <a href="/execute" class="btn btn-primary">Execute First Skill</a>
+    </div>
+    {% endif %}
+</div>
+"""
+
+EXECUTION_DETAIL_TEMPLATE = """
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
+        <h2>Execution <code>{{ execution.short_id }}</code></h2>
+        <div style="display:flex; gap:8px">
+            {% if execution.status == 'running' %}
+            <form method="POST" action="/executions/{{ execution.id }}/cancel">
+                <button type="submit" class="btn" style="background:#c0392b; color:white">Cancel</button>
+            </form>
+            {% endif %}
+            <a href="/executions" class="btn btn-sm">&larr; Back</a>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+        <dl class="exec-meta">
+            <dt>Skill</dt><dd>{{ execution.skill }}</dd>
+            <dt>Target</dt><dd><code>{{ execution.target_path }}</code></dd>
+            <dt>User</dt><dd>{{ execution.user }}</dd>
+            <dt>Status</dt>
+            <dd>
+                {% if execution.status == 'completed' %}<span class="badge badge-ok">Completed</span>
+                {% elif execution.status == 'running' %}<span class="badge badge-active">Running</span>
+                {% elif execution.status == 'failed' %}<span class="badge badge-err">Failed</span>
+                {% elif execution.status == 'cancelled' %}<span class="badge" style="background:#555">Cancelled</span>
+                {% else %}<span class="badge">{{ execution.status }}</span>{% endif %}
+            </dd>
+            <dt>Created</dt><dd>{{ execution.created_at }}</dd>
+            <dt>Started</dt><dd>{{ execution.started_at or '-' }}</dd>
+            <dt>Finished</dt><dd>{{ execution.finished_at or '-' }}</dd>
+            <dt>Duration</dt><dd>{{ execution.duration }}</dd>
+            {% if execution.exit_code is not none %}
+            <dt>Exit Code</dt><dd>{{ execution.exit_code }}</dd>
+            {% endif %}
+            {% if execution.error %}
+            <dt>Error</dt><dd style="color:#e74c3c">{{ execution.error }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom:12px">Output Log</h3>
+        <div class="log-viewer" id="log-content">{{ log | e }}</div>
+    </div>
+</div>
+{% if execution.status == 'running' %}
+<script>
+(function() {
+    var logEl = document.getElementById('log-content');
+    setInterval(function() {
+        fetch('/api/executions/{{ execution.id }}/log')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                logEl.textContent = data.log;
+                logEl.scrollTop = logEl.scrollHeight;
+            });
+    }, 2000);
+})();
+</script>
+{% endif %}
+"""
+
+
+@app.route('/execute')
+@login_required
+def execute_page():
+    skills = get_executable_skills()
+    return _render(EXECUTE_TEMPLATE,
+                   title='Execute Skills',
+                   active_page='executions',
+                   executable_skills=skills,
+                   ai_skills=AI_SKILLS)
+
+
+@app.route('/execute/<skill>', methods=['POST'])
+@login_required
+def execute_skill(skill):
+    target = request.form.get('target_path', '').strip()
+    if not target:
+        flash('Target path is required', 'danger')
+        return redirect(url_for('execute_page'))
+    try:
+        exec_id = run_skill(skill, target, session.get('user', 'anonymous'))
+        flash(f'Execution {exec_id[:8]} started for {skill}', 'success')
+        return redirect(f'/executions/{exec_id}')
+    except ValueError as e:
+        flash(str(e), 'danger')
+        return redirect(url_for('execute_page'))
+    except FileNotFoundError as e:
+        flash(str(e), 'danger')
+        return redirect(url_for('execute_page'))
+
+
+@app.route('/executions')
+@login_required
+def executions_list():
+    execs = list_executions(limit=50)
+    return _render(EXECUTIONS_LIST_TEMPLATE,
+                   title='Executions',
+                   active_page='executions',
+                   executions=execs)
+
+
+@app.route('/executions/<exec_id>')
+@login_required
+def execution_detail(exec_id):
+    execution = get_execution(exec_id)
+    if not execution:
+        flash('Execution not found', 'danger')
+        return redirect(url_for('executions_list'))
+    log = get_execution_log(exec_id)
+    return _render(EXECUTION_DETAIL_TEMPLATE,
+                   title=f'Execution {exec_id[:8]}',
+                   active_page='executions',
+                   execution=execution,
+                   log=log)
+
+
+@app.route('/executions/<exec_id>/cancel', methods=['POST'])
+@login_required
+def execution_cancel(exec_id):
+    cancelled = cancel_execution(exec_id)
+    if cancelled:
+        flash('Execution cancelled', 'success')
+    else:
+        flash('Cannot cancel (already completed or not found)', 'warning')
+    return redirect(f'/executions/{exec_id}')
+
+
 # --- API endpoints -------------------------------------------------------
 @app.route('/api/health')
 def api_health():
-    return jsonify({'status': 'ok', 'phase': 2,
+    return jsonify({'status': 'ok', 'phase': 3,
                     'server': 'k8s-agent-tools',
                     'timestamp': datetime.now().isoformat()})
 
@@ -1554,9 +1878,46 @@ def api_plan_state(operator, slug):
     return jsonify(state)
 
 
+@app.route('/api/execute/<skill>', methods=['POST'])
+@login_required
+def api_execute_skill(skill):
+    data = request.get_json(silent=True) or {}
+    target = data.get('target_path', '')
+    if not target:
+        return jsonify({'error': 'target_path required'}), 400
+    try:
+        exec_id = run_skill(skill, target, session.get('user', 'anonymous'))
+        return jsonify({'exec_id': exec_id, 'status': 'queued'})
+    except (ValueError, FileNotFoundError) as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/executions')
+@login_required
+def api_executions():
+    return jsonify(list_executions(limit=50))
+
+
+@app.route('/api/executions/<exec_id>')
+@login_required
+def api_execution(exec_id):
+    execution = get_execution(exec_id)
+    if not execution:
+        return jsonify({'error': 'not found'}), 404
+    return jsonify(execution)
+
+
+@app.route('/api/executions/<exec_id>/log')
+@login_required
+def api_execution_log(exec_id):
+    log = get_execution_log(exec_id)
+    return jsonify({'exec_id': exec_id, 'log': log})
+
+
 # --- Main ----------------------------------------------------------------
 if __name__ == '__main__':
     config.DATA_ROOT.mkdir(parents=True, exist_ok=True)
     config.USERS_DIR.mkdir(parents=True, exist_ok=True)
     config.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    config.EXECUTIONS_DIR.mkdir(parents=True, exist_ok=True)
     app.run(host='0.0.0.0', port=config.PORT, debug=True)
