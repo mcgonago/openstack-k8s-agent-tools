@@ -41,3 +41,5 @@ GERRIT_QUERY = os.environ.get('GERRIT_QUERY', 'project:openstack/ status:open')
 
 INTEGRATION_CACHE_TTL = int(os.environ.get(
     'K8S_AGENT_TOOLS_CACHE_TTL', '600'))
+
+ANALYSES_DIR = DATA_ROOT / 'analyses'

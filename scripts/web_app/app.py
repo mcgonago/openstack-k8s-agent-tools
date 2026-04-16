@@ -38,6 +38,13 @@ from .gerrit_client import (get_reviews as gerrit_get_reviews,
                              get_status as gerrit_get_status,
                              get_demo_data as gerrit_get_demo,
                              DEMO_REVIEWS as GERRIT_DEMO_REVIEWS)
+from .log_analyzer_wrapper import (analyze_logs as wrapper_analyze_logs,
+                                    get_demo_log,
+                                    list_analyses as list_log_analyses)
+from .code_parser_wrapper import (analyze_code_flow as wrapper_analyze_code_flow,
+                                   list_analyses as list_flow_analyses)
+from .style_analyzer_wrapper import (analyze_style as wrapper_analyze_style,
+                                      list_analyses as list_style_analyses)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('K8S_AGENT_TOOLS_SECRET',
@@ -575,6 +582,86 @@ tr:hover td { background: var(--bg-tertiary); }
 /* Phase 4: Vote badges */
 .vote-plus { color: #27ae60; font-weight: 700; }
 .vote-minus { color: #e74c3c; font-weight: 700; }
+
+/* Phase 5: Analysis forms */
+.analysis-form {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.analysis-form textarea {
+    width: 100%;
+    min-height: 200px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+/* Phase 5: Findings */
+.finding-row {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.finding-row:last-child { border-bottom: none; }
+.finding-row .line-num {
+    color: var(--text-secondary);
+    font-family: monospace;
+    min-width: 50px;
+}
+.severity-error { color: #e74c3c; font-weight: 700; }
+.severity-warn { color: #f39c12; font-weight: 700; }
+.severity-info { color: #3498db; font-weight: 600; }
+
+/* Phase 5: Flow step types */
+.flow-step-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: monospace;
+}
+.flow-step-type.resource_fetch { background: rgba(52,152,219,0.2); color: #3498db; }
+.flow-step-type.resource_create { background: rgba(39,174,96,0.2); color: #27ae60; }
+.flow-step-type.resource_update { background: rgba(243,156,18,0.2); color: #f39c12; }
+.flow-step-type.resource_delete { background: rgba(231,76,60,0.2); color: #e74c3c; }
+.flow-step-type.resource_patch { background: rgba(142,68,173,0.2); color: #8e44ad; }
+.flow-step-type.finalizer { background: rgba(155,89,182,0.2); color: #9b59b6; }
+.flow-step-type.result_return { background: rgba(149,165,166,0.2); color: #95a5a6; }
+.flow-step-type.condition_set { background: rgba(26,188,156,0.2); color: #1abc9c; }
+.flow-step-type.config_map { background: rgba(230,126,34,0.2); color: #e67e22; }
+
+/* Phase 5: Summary badges row */
+.summary-badges {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+.summary-badge {
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 100px;
+}
+.summary-badge .count { font-size: 28px; font-weight: 800; display: block; }
+.summary-badge .label { font-size: 12px; text-transform: uppercase; }
+.summary-badge.errors { background: rgba(231,76,60,0.15); color: #e74c3c; }
+.summary-badge.warnings { background: rgba(243,156,18,0.15); color: #f39c12; }
+.summary-badge.infos { background: rgba(52,152,219,0.15); color: #3498db; }
+.summary-badge.total { background: rgba(149,165,166,0.15); color: #95a5a6; }
 """
 
 # ---------------------------------------------------------------------------
@@ -590,6 +677,17 @@ HEADER_HTML = """
         <a href="/plans" class="{{ 'active' if active_page == 'plans' else '' }}">Plans</a>
         <a href="/executions" class="{{ 'active' if active_page == 'executions' else '' }}">Executions</a>
         <a href="/team" class="{{ 'active' if active_page == 'team' else '' }}">Team</a>
+
+        <div class="dropdown">
+            <button class="{{ 'active' if active_page == 'analyze' else '' }}">Analyze &#9662;</button>
+            <div class="dropdown-menu">
+                <a href="/analyze/logs">&#x1f4c4; Log Analysis</a>
+                <a href="/analyze/code-flow">&#x1f504; Code Flow</a>
+                <a href="/analyze/style">&#x1f3a8; Style Analysis</a>
+                <hr>
+                <a href="/analyze/history">&#x1f4dc; History</a>
+            </div>
+        </div>
 
         <div class="dropdown">
             <button>Ecosystem &#9662;</button>
@@ -686,7 +784,7 @@ BASE_TEMPLATE = """<!DOCTYPE html>
 {% endwith %}
 {{ content | safe }}
 <footer class="site-footer">
-    OpenStack K8s Agent Tools Server &mdash; Phase 4 &mdash; {{ now }}
+    OpenStack K8s Agent Tools Server &mdash; Phase 5 &mdash; {{ now }}
 </footer>
 </body>
 </html>"""
@@ -971,6 +1069,13 @@ DASHBOARD_TEMPLATE = """
         </div>
     </div>
 
+    <div class="stats-row" style="margin-top:12px">
+        <div class="stat-card">
+            <span class="stat-value">{{ total_analyses }}</span>
+            <span class="stat-label">Analyses</span>
+        </div>
+    </div>
+
     <div class="integration-row">
         <span class="integration-badge {{ jira_status }}">
             &#x1f4cb; Jira: {{ jira_status | title }}
@@ -1094,6 +1199,10 @@ def dashboard():
     gh_status = github_get_status()
     ge_status = gerrit_get_status()
 
+    total_analyses = (len(list_log_analyses(100)) +
+                      len(list_flow_analyses(100)) +
+                      len(list_style_analyses(100)))
+
     return _render(DASHBOARD_TEMPLATE,
                    title='Dashboard',
                    active_page='dashboard',
@@ -1109,6 +1218,7 @@ def dashboard():
                    jira_status=j_status,
                    github_status=gh_status,
                    gerrit_status=ge_status,
+                   total_analyses=total_analyses,
                    plan_last_activity=plan_last)
 
 
@@ -1946,6 +2056,417 @@ def execution_cancel(exec_id):
     else:
         flash('Cannot cancel (already completed or not found)', 'warning')
     return redirect(f'/executions/{exec_id}')
+
+
+# --- Analysis pages (Phase 5) ---------------------------------------------
+ANALYZE_LOGS_TEMPLATE = """
+<div class="container" style="max-width:1000px">
+    <h2 style="margin-bottom:24px">&#x1f4c4; Log Analysis</h2>
+
+    <div class="analysis-form">
+        <form method="POST">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+                <label style="font-weight:600">Paste operator logs:</label>
+                <button type="button" onclick="document.getElementById('log-input').value=document.getElementById('demo-data').textContent" class="btn btn-sm">Load Demo</button>
+            </div>
+            <textarea id="log-input" name="log_text" placeholder="Paste operator pod logs here...">{{ log_text or '' }}</textarea>
+            <div style="margin-top:12px">
+                <button type="submit" class="btn btn-primary">&#x1f50d; Analyze</button>
+            </div>
+        </form>
+    </div>
+
+    {% if analysis %}
+    <div class="summary-badges">
+        <div class="summary-badge errors">
+            <span class="count">{{ analysis.summary.errors }}</span>
+            <span class="label">Errors</span>
+        </div>
+        <div class="summary-badge warnings">
+            <span class="count">{{ analysis.summary.warnings }}</span>
+            <span class="label">Warnings</span>
+        </div>
+        <div class="summary-badge infos">
+            <span class="count">{{ analysis.summary.info }}</span>
+            <span class="label">Info</span>
+        </div>
+        <div class="summary-badge total">
+            <span class="count">{{ analysis.lines }}</span>
+            <span class="label">Lines</span>
+        </div>
+    </div>
+
+    {% if analysis.result.findings %}
+    <div class="card">
+        <h3 style="margin-bottom:12px">Findings</h3>
+        {% for f in analysis.result.findings %}
+        <div class="finding-row">
+            <span class="line-num">L{{ f.line or '-' }}</span>
+            <span class="severity-{{ f.severity or 'info' }}">{{ (f.severity or 'info') | upper }}</span>
+            <span>{{ f.message or f.pattern or f.text or '' }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif analysis.result.raw_output %}
+    <div class="card">
+        <h3 style="margin-bottom:12px">Raw Output</h3>
+        <div class="log-viewer">{{ analysis.result.raw_output }}</div>
+    </div>
+    {% elif analysis.summary.get('fallback') %}
+    <div class="card">
+        <h3 style="margin-bottom:12px">Log Summary (line-level scan)</h3>
+        <p style="color:var(--text-secondary); margin-bottom:12px">
+            The log analyzer returned non-JSON output. Showing line-level severity counts.
+        </p>
+        {% for line in log_text.splitlines() %}
+        <div class="finding-row">
+            <span class="line-num">L{{ loop.index }}</span>
+            {% if 'ERROR' in line %}<span class="severity-error">ERROR</span>
+            {% elif 'WARN' in line %}<span class="severity-warn">WARN</span>
+            {% elif 'INFO' in line %}<span class="severity-info">INFO</span>
+            {% else %}<span style="color:var(--text-secondary)">--</span>{% endif %}
+            <span style="font-family:monospace; font-size:13px">{{ line | truncate(100) }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <script id="demo-data" type="text/plain">{{ demo_log }}</script>
+</div>
+"""
+
+ANALYZE_FLOW_TEMPLATE = """
+<div class="container" style="max-width:1000px">
+    <h2 style="margin-bottom:24px">&#x1f504; Code Flow Analysis</h2>
+
+    <div class="analysis-form">
+        <form method="POST">
+            <label style="font-weight:600; display:block; margin-bottom:8px">Operator directory path:</label>
+            <div style="display:flex; gap:8px">
+                <input type="text" name="path" value="{{ target_path or '' }}" placeholder="/path/to/operator-directory"
+                       style="flex:1; padding:8px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border); border-radius:4px">
+                <button type="submit" class="btn btn-primary">&#x1f50d; Analyze</button>
+            </div>
+        </form>
+    </div>
+
+    {% if analysis %}
+    {% if analysis.error %}
+    <div class="card" style="border-color:#e74c3c">
+        <p style="color:#e74c3c">{{ analysis.error }}</p>
+    </div>
+    {% else %}
+    <div class="summary-badges">
+        <div class="summary-badge total">
+            <span class="count">{{ analysis.summary.reconcilers }}</span>
+            <span class="label">Reconcilers</span>
+        </div>
+        <div class="summary-badge infos">
+            <span class="count">{{ analysis.summary.steps }}</span>
+            <span class="label">Flow Steps</span>
+        </div>
+        <div class="summary-badge warnings">
+            <span class="count">{{ analysis.summary.error_patterns }}</span>
+            <span class="label">Error Handlers</span>
+        </div>
+        <div class="summary-badge total">
+            <span class="count">{{ analysis.summary.crds }}</span>
+            <span class="label">CRDs</span>
+        </div>
+    </div>
+
+    {% for rec in analysis.result.get('reconcilers', []) %}
+    <div class="card" style="margin-bottom:24px">
+        <h3>&#x1f4c4; {{ rec.file }}</h3>
+        {% for flow in rec.get('flows', []) %}
+        <div style="margin-top:16px; padding:16px; background:var(--bg-tertiary); border-radius:6px">
+            <h4 style="margin-bottom:12px; font-family:monospace; font-size:14px; color:var(--accent)">
+                {{ flow.function }}
+            </h4>
+
+            <h5 style="margin-bottom:8px">Flow Steps ({{ flow.steps | length }})</h5>
+            <table>
+                <thead><tr><th>#</th><th>Type</th><th>Code</th><th>Line</th></tr></thead>
+                <tbody>
+                {% for step in flow.steps %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><span class="flow-step-type {{ step.type }}">{{ step.type }}</span></td>
+                    <td><code>{{ step.code }}</code></td>
+                    <td>{{ step.line }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            {% if flow.errorHandling %}
+            <h5 style="margin-top:16px; margin-bottom:8px">Error Handling ({{ flow.errorHandling | length }})</h5>
+            {% for eh in flow.errorHandling[:8] %}
+            <div class="finding-row">
+                <span class="line-num">L{{ eh.line }}</span>
+                <span class="severity-error">ERR</span>
+                <code style="font-size:13px">{{ eh.code | truncate(80) }}</code>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+    {% if analysis.result.get('main') %}
+    <div class="card">
+        <h3>&#x1f3c1; Main Setup</h3>
+        {% for s in analysis.result.main.get('setup', []) %}
+        <div class="finding-row">
+            <span class="line-num">L{{ s.line }}</span>
+            <code>{{ s.code }}</code>
+        </div>
+        {% endfor %}
+        {% if analysis.result.main.get('imports') %}
+        <h5 style="margin-top:12px; margin-bottom:8px">Imports ({{ analysis.result.main.imports | length }})</h5>
+        <div style="font-family:monospace; font-size:13px; color:var(--text-secondary)">
+            {% for imp in analysis.result.main.imports %}
+            <div>{{ imp }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+</div>
+"""
+
+ANALYZE_STYLE_TEMPLATE = """
+<div class="container" style="max-width:1000px">
+    <h2 style="margin-bottom:24px">&#x1f3a8; Style Analysis</h2>
+
+    <div class="analysis-form">
+        <form method="POST">
+            <label style="font-weight:600; display:block; margin-bottom:8px">Go file or directory path:</label>
+            <div style="display:flex; gap:8px">
+                <input type="text" name="path" value="{{ target_path or '' }}" placeholder="/path/to/file.go or /path/to/operator"
+                       style="flex:1; padding:8px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border); border-radius:4px">
+                <button type="submit" class="btn btn-primary">&#x1f50d; Analyze</button>
+            </div>
+        </form>
+    </div>
+
+    {% if analysis %}
+    {% if analysis.error %}
+    <div class="card" style="border-color:#e74c3c">
+        <p style="color:#e74c3c">{{ analysis.error }}</p>
+    </div>
+    {% else %}
+    <div class="summary-badges">
+        <div class="summary-badge warnings">
+            <span class="count">{{ analysis.summary.issues }}</span>
+            <span class="label">Issues</span>
+        </div>
+        <div class="summary-badge infos">
+            <span class="count">{{ analysis.summary.suggestions }}</span>
+            <span class="label">Suggestions</span>
+        </div>
+        <div class="summary-badge total">
+            <span class="count">{{ analysis.summary.modernizations }}</span>
+            <span class="label">Modernizations</span>
+        </div>
+        {% if analysis.summary.score is not none %}
+        <div class="summary-badge {% if analysis.summary.score >= 8 %}infos{% elif analysis.summary.score >= 5 %}warnings{% else %}errors{% endif %}">
+            <span class="count">{{ analysis.summary.score }}/10</span>
+            <span class="label">Score</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if analysis.result.issues %}
+    <div class="card" style="margin-bottom:24px">
+        <h3 style="margin-bottom:12px">Issues ({{ analysis.result.issues | length }})</h3>
+        <table>
+            <thead><tr><th>Line</th><th>Severity</th><th>Rule</th><th>Message</th></tr></thead>
+            <tbody>
+            {% for i in analysis.result.issues %}
+            <tr>
+                <td>{{ i.line or '-' }}</td>
+                <td><span class="severity-{{ i.severity or 'info' }}">{{ (i.severity or 'info') | upper }}</span></td>
+                <td><code>{{ i.rule or i.code or '-' }}</code></td>
+                <td>{{ i.message or i.description or '' }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if analysis.result.suggestions %}
+    <div class="card" style="margin-bottom:24px">
+        <h3 style="margin-bottom:12px">Suggestions</h3>
+        {% for s in analysis.result.suggestions %}
+        <div class="finding-row">
+            <span class="severity-info">TIP</span>
+            <span>{{ s if s is string else s.get('message', s) }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if analysis.result.modernizations %}
+    <div class="card">
+        <h3 style="margin-bottom:12px">Modernizations</h3>
+        {% for m in analysis.result.modernizations %}
+        <div class="finding-row">
+            <span class="severity-warn">MOD</span>
+            <span>{{ m if m is string else m.get('message', m) }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if analysis.result.raw_output %}
+    <div class="card">
+        <h3 style="margin-bottom:12px">Raw Output</h3>
+        <div class="log-viewer">{{ analysis.result.raw_output }}</div>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+</div>
+"""
+
+ANALYZE_HISTORY_TEMPLATE = """
+<div class="container">
+    <h2 style="margin-bottom:24px">&#x1f4dc; Analysis History</h2>
+
+    <div class="summary-badges" style="margin-bottom:24px">
+        <div class="summary-badge total">
+            <span class="count">{{ all_analyses | length }}</span>
+            <span class="label">Total</span>
+        </div>
+        <div class="summary-badge infos">
+            <span class="count">{{ log_count }}</span>
+            <span class="label">Log</span>
+        </div>
+        <div class="summary-badge warnings">
+            <span class="count">{{ flow_count }}</span>
+            <span class="label">Code Flow</span>
+        </div>
+        <div class="summary-badge errors">
+            <span class="count">{{ style_count }}</span>
+            <span class="label">Style</span>
+        </div>
+    </div>
+
+    {% if all_analyses %}
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>Date</th><th>Type</th><th>Target</th><th>User</th><th>Findings</th></tr>
+            </thead>
+            <tbody>
+            {% for a in all_analyses %}
+                <tr>
+                    <td style="font-size:13px">{{ a.created_at[:16] if a.created_at else '-' }}</td>
+                    <td>
+                        {% if a.type == 'log' %}<span class="badge badge-active">Log</span>
+                        {% elif a.type == 'code-flow' %}<span class="badge badge-accent">Flow</span>
+                        {% elif a.type == 'style' %}<span class="badge" style="background:#8e44ad">Style</span>
+                        {% else %}<span class="badge">{{ a.type }}</span>{% endif %}
+                    </td>
+                    <td style="font-size:13px; max-width:300px; overflow:hidden; text-overflow:ellipsis">{{ a.target }}</td>
+                    <td>{{ a.user }}</td>
+                    <td>
+                        {% if a.summary %}
+                            {% if a.type == 'log' %}{{ a.summary.get('total', 0) }}
+                            {% elif a.type == 'code-flow' %}{{ a.summary.get('steps', 0) }} steps
+                            {% elif a.type == 'style' %}{{ a.summary.get('issues', 0) }} issues
+                            {% endif %}
+                        {% else %}-{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center; padding:48px">
+        <p style="color:var(--text-secondary); margin-bottom:16px">No analyses yet.</p>
+        <div style="display:flex; gap:8px; justify-content:center">
+            <a href="/analyze/logs" class="btn btn-primary">Analyze Logs</a>
+            <a href="/analyze/code-flow" class="btn">Code Flow</a>
+            <a href="/analyze/style" class="btn">Style</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+"""
+
+
+@app.route('/analyze/logs', methods=['GET', 'POST'])
+@login_required
+def analyze_logs_page():
+    analysis = None
+    log_text = ''
+    if request.method == 'POST':
+        log_text = request.form.get('log_text', '').strip()
+        if log_text:
+            analysis = wrapper_analyze_logs(log_text, session.get('user', 'anonymous'))
+    return _render(ANALYZE_LOGS_TEMPLATE,
+                   title='Log Analysis',
+                   active_page='analyze',
+                   analysis=analysis,
+                   log_text=log_text,
+                   demo_log=get_demo_log())
+
+
+@app.route('/analyze/code-flow', methods=['GET', 'POST'])
+@login_required
+def analyze_flow_page():
+    analysis = None
+    target_path = ''
+    if request.method == 'POST':
+        target_path = request.form.get('path', '').strip()
+        if target_path:
+            analysis = wrapper_analyze_code_flow(target_path, session.get('user', 'anonymous'))
+    return _render(ANALYZE_FLOW_TEMPLATE,
+                   title='Code Flow Analysis',
+                   active_page='analyze',
+                   analysis=analysis,
+                   target_path=target_path)
+
+
+@app.route('/analyze/style', methods=['GET', 'POST'])
+@login_required
+def analyze_style_page():
+    analysis = None
+    target_path = ''
+    if request.method == 'POST':
+        target_path = request.form.get('path', '').strip()
+        if target_path:
+            analysis = wrapper_analyze_style(target_path, session.get('user', 'anonymous'))
+    return _render(ANALYZE_STYLE_TEMPLATE,
+                   title='Style Analysis',
+                   active_page='analyze',
+                   analysis=analysis,
+                   target_path=target_path)
+
+
+@app.route('/analyze/history')
+@login_required
+def analyze_history():
+    logs = list_log_analyses(50)
+    flows = list_flow_analyses(50)
+    styles = list_style_analyses(50)
+    all_analyses = sorted(logs + flows + styles,
+                          key=lambda x: x.get('created_at', ''), reverse=True)
+    return _render(ANALYZE_HISTORY_TEMPLATE,
+                   title='Analysis History',
+                   active_page='analyze',
+                   all_analyses=all_analyses,
+                   log_count=len(logs),
+                   flow_count=len(flows),
+                   style_count=len(styles))
 
 
 # --- Team portal (Phase 4) -----------------------------------------------

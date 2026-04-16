@@ -1,0 +1,14 @@
+created_at: '2026-04-16T14:37:51'
+id: 356507da-619b-4907-870a-e9445ca06076
+summary:
+  controllers: 0
+  crds: 0
+  error_patterns: 10
+  flows: 1
+  has_main: true
+  reconcilers: 1
+  steps: 12
+  webhooks: 0
+target: /home/omcgonag/Work/mymcp/workspace/iproject/projects/openstack_k8s_agent_tools/repo/openstack-k8s-agent-tools/tests/sample-operator
+type: code-flow
+user: admin
