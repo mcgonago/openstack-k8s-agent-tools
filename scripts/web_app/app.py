@@ -2,12 +2,12 @@ import os
 import yaml
 import hashlib
 import secrets
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from pathlib import Path
 from functools import wraps
 
 from flask import (Flask, render_template_string, request, redirect,
-                   url_for, flash, session, jsonify, abort)
+                   url_for, flash, session, jsonify, abort, Response)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from . import config
@@ -45,6 +45,10 @@ from .code_parser_wrapper import (analyze_code_flow as wrapper_analyze_code_flow
                                    list_analyses as list_flow_analyses)
 from .style_analyzer_wrapper import (analyze_style as wrapper_analyze_style,
                                       list_analyses as list_style_analyses)
+from .history_manager import (snapshot_today, list_snapshots, get_snapshot,
+                               compute_trends, seed_demo_history)
+from .report_generator import (generate_daily, generate_weekly,
+                                list_reports, get_report)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('K8S_AGENT_TOOLS_SECRET',
@@ -662,6 +666,53 @@ tr:hover td { background: var(--bg-tertiary); }
 .summary-badge.warnings { background: rgba(243,156,18,0.15); color: #f39c12; }
 .summary-badge.infos { background: rgba(52,152,219,0.15); color: #3498db; }
 .summary-badge.total { background: rgba(149,165,166,0.15); color: #95a5a6; }
+
+/* Phase 6: Trend arrows */
+.trend-up { color: #27ae60; font-size: 12px; font-weight: 700; }
+.trend-down { color: #e74c3c; font-size: 12px; font-weight: 700; }
+.trend-flat { color: #95a5a6; font-size: 12px; font-weight: 600; }
+
+/* Phase 6: Mini trend bar */
+.trend-bar {
+    display: inline-flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 32px;
+    padding: 4px 0;
+}
+.trend-bar .bar {
+    width: 20px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+    min-height: 2px;
+    opacity: 0.7;
+}
+.trend-bar .bar:last-child { opacity: 1.0; }
+
+/* Phase 6: History table */
+.snapshot-table td { font-size: 14px; }
+.snapshot-table .date-col { font-weight: 600; min-width: 90px; }
+
+/* Phase 6: Report viewer */
+.report-viewer {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+/* Phase 6: Action button row */
+.action-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
 """
 
 # ---------------------------------------------------------------------------
@@ -677,6 +728,7 @@ HEADER_HTML = """
         <a href="/plans" class="{{ 'active' if active_page == 'plans' else '' }}">Plans</a>
         <a href="/executions" class="{{ 'active' if active_page == 'executions' else '' }}">Executions</a>
         <a href="/team" class="{{ 'active' if active_page == 'team' else '' }}">Team</a>
+        <a href="/history" class="{{ 'active' if active_page == 'history' else '' }}">History</a>
 
         <div class="dropdown">
             <button class="{{ 'active' if active_page == 'analyze' else '' }}">Analyze &#9662;</button>
@@ -784,7 +836,7 @@ BASE_TEMPLATE = """<!DOCTYPE html>
 {% endwith %}
 {{ content | safe }}
 <footer class="site-footer">
-    OpenStack K8s Agent Tools Server &mdash; Phase 5 &mdash; {{ now }}
+    OpenStack K8s Agent Tools Server &mdash; Phase 6 &mdash; {{ now }}
 </footer>
 </body>
 </html>"""
@@ -1073,8 +1125,44 @@ DASHBOARD_TEMPLATE = """
         <div class="stat-card">
             <span class="stat-value">{{ total_analyses }}</span>
             <span class="stat-label">Analyses</span>
+            {% if trends.has_data %}
+            <span class="trend-{{ trends.analysis_arrow }}">
+                {% if trends.analysis_arrow == 'up' %}&#9650;{% elif trends.analysis_arrow == 'down' %}&#9660;{% else %}={% endif %}
+                {{ '%+d' | format(trends.analysis_delta) }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ trends.today_execs }}</span>
+            <span class="stat-label">Today Execs</span>
+            {% if trends.has_data %}
+            <span class="trend-{{ trends.exec_arrow }}">
+                {% if trends.exec_arrow == 'up' %}&#9650;{% elif trends.exec_arrow == 'down' %}&#9660;{% else %}={% endif %}
+                {{ '%+d' | format(trends.exec_delta) }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ total_reports }}</span>
+            <span class="stat-label">Reports</span>
         </div>
     </div>
+
+    {% if trends.has_data and trends.daily_execs %}
+    <div style="margin-top:16px; padding:16px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px">
+        <span style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:8px">7-Day Executions:</span>
+        <div class="trend-bar">
+            {% set max_val = trends.daily_execs | max %}
+            {% for val in trends.daily_execs %}
+            <div style="text-align:center">
+                <div class="bar" style="height: {{ ((val / (max_val if max_val else 1)) * 28) | int + 4 }}px"
+                     title="{{ trends.daily_labels[loop.index0] }}: {{ val }}"></div>
+                <div style="font-size:9px; color:var(--text-secondary); margin-top:2px">{{ trends.daily_labels[loop.index0] }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <div class="integration-row">
         <span class="integration-badge {{ jira_status }}">
@@ -1202,6 +1290,8 @@ def dashboard():
     total_analyses = (len(list_log_analyses(100)) +
                       len(list_flow_analyses(100)) +
                       len(list_style_analyses(100)))
+    trends = compute_trends(7)
+    total_reports = len(list_reports(100))
 
     return _render(DASHBOARD_TEMPLATE,
                    title='Dashboard',
@@ -1219,6 +1309,8 @@ def dashboard():
                    github_status=gh_status,
                    gerrit_status=ge_status,
                    total_analyses=total_analyses,
+                   trends=trends,
+                   total_reports=total_reports,
                    plan_last_activity=plan_last)
 
 
@@ -2056,6 +2148,400 @@ def execution_cancel(exec_id):
     else:
         flash('Cannot cancel (already completed or not found)', 'warning')
     return redirect(f'/executions/{exec_id}')
+
+
+# --- History + Reporting (Phase 6) -----------------------------------------
+HISTORY_TEMPLATE = """
+<div class="container">
+    <h2 style="margin-bottom:24px">&#x1f4dc; History</h2>
+
+    <div class="action-row">
+        <form method="POST" action="/api/history/snapshot" style="display:inline">
+            <button type="submit" class="btn btn-primary">&#x1f4f8; Take Snapshot Now</button>
+        </form>
+        <form method="POST" action="/reports/generate" style="display:inline">
+            <input type="hidden" name="type" value="weekly">
+            <button type="submit" class="btn">&#x1f4ca; Generate Weekly Report</button>
+        </form>
+        <form method="POST" action="/api/history/seed-demo" style="display:inline">
+            <button type="submit" class="btn">&#x1f331; Seed Demo History</button>
+        </form>
+    </div>
+
+    {% if trends.has_data and trends.daily_execs %}
+    <div class="card" style="margin-bottom:24px">
+        <h3 style="margin-bottom:12px">7-Day Trend</h3>
+        <div style="display:flex; gap:32px">
+            <div>
+                <span style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px">Executions</span>
+                <div class="trend-bar">
+                    {% set max_e = trends.daily_execs | max %}
+                    {% for val in trends.daily_execs %}
+                    <div style="text-align:center">
+                        <div class="bar" style="height: {{ ((val / (max_e if max_e else 1)) * 28) | int + 4 }}px"
+                             title="{{ trends.daily_labels[loop.index0] }}: {{ val }}"></div>
+                        <div style="font-size:9px; color:var(--text-secondary); margin-top:2px">{{ trends.daily_labels[loop.index0] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <span style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:4px">Analyses</span>
+                <div class="trend-bar">
+                    {% set max_a = trends.daily_analyses | max %}
+                    {% for val in trends.daily_analyses %}
+                    <div style="text-align:center">
+                        <div class="bar" style="height: {{ ((val / (max_a if max_a else 1)) * 28) | int + 4 }}px; background: #3498db"
+                             title="{{ trends.daily_labels[loop.index0] }}: {{ val }}"></div>
+                        <div style="font-size:9px; color:var(--text-secondary); margin-top:2px">{{ trends.daily_labels[loop.index0] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if snapshots %}
+    <div class="card">
+        <h3 style="margin-bottom:12px">Daily Snapshots</h3>
+        <table class="snapshot-table">
+            <thead>
+                <tr><th>Date</th><th>Generated</th><th>Executions</th><th>Analyses</th><th>Pass Rate</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for s in snapshots %}
+                {% set execs = s.executions or {} %}
+                {% set total = execs.get('total', 0) %}
+                {% set completed = execs.get('completed', 0) %}
+                {% set prate = '%.1f%%' | format(completed / total * 100) if total > 0 else 'N/A' %}
+                <tr>
+                    <td class="date-col">{{ s.date }}</td>
+                    <td style="font-size:13px; color:var(--text-secondary)">{{ s.generated_at[:16] if s.generated_at else '-' }} {{ s.generated_by or '' }}</td>
+                    <td>{{ total }}</td>
+                    <td>{{ (s.analyses or {}).get('total', 0) }}</td>
+                    <td>{{ prate }}</td>
+                    <td style="text-align:right"><a href="/history/{{ s.date }}" class="btn btn-sm">View</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center; padding:48px">
+        <p style="color:var(--text-secondary); margin-bottom:16px">No snapshots yet.</p>
+        <p style="color:var(--text-secondary)">Click "Take Snapshot Now" to capture today's metrics, or "Seed Demo History" for sample data.</p>
+    </div>
+    {% endif %}
+</div>
+"""
+
+HISTORY_DETAIL_TEMPLATE = """
+<div class="container" style="max-width:1000px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
+        <h2>&#x1f4c5; Daily Report: {{ date_str }}</h2>
+        <a href="/history/{{ date_str }}?export=md" class="btn btn-sm">&#x1f4e5; Download .md</a>
+    </div>
+
+    {% set execs = snapshot.executions or {} %}
+    {% set analyses = snapshot.analyses or {} %}
+    {% set total_e = execs.get('total', 0) %}
+    {% set completed = execs.get('completed', 0) %}
+    {% set failed = execs.get('failed', 0) %}
+    {% set prate = '%.1f' | format(completed / total_e * 100) if total_e > 0 else '0.0' %}
+    {% set findings = analyses.get('findings', {}) %}
+    {% set total_findings = findings.get('errors', 0) + findings.get('warnings', 0) + findings.get('info', 0) %}
+
+    <div class="summary-badges">
+        <div class="summary-badge total">
+            <span class="count">{{ total_e }}</span>
+            <span class="label">Executions</span>
+        </div>
+        <div class="summary-badge infos">
+            <span class="count">{{ analyses.get('total', 0) }}</span>
+            <span class="label">Analyses</span>
+        </div>
+        <div class="summary-badge {% if prate | float >= 80 %}infos{% elif prate | float >= 50 %}warnings{% else %}errors{% endif %}">
+            <span class="count">{{ prate }}%</span>
+            <span class="label">Pass Rate</span>
+        </div>
+        <div class="summary-badge warnings">
+            <span class="count">{{ total_findings }}</span>
+            <span class="label">Findings</span>
+        </div>
+    </div>
+
+    {% set by_skill = execs.get('by_skill', {}) %}
+    {% if by_skill %}
+    <div class="card" style="margin-bottom:24px">
+        <h3 style="margin-bottom:12px">Executions by Skill</h3>
+        <table>
+            <thead><tr><th>Skill</th><th>Runs</th></tr></thead>
+            <tbody>
+            {% for skill, count in by_skill | dictsort(by='value', reverse=true) %}
+            <tr><td>{{ skill }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+            <tr style="font-weight:700; border-top:2px solid var(--border)">
+                <td>TOTAL</td><td>{{ total_e }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% set by_type = analyses.get('by_type', {}) %}
+    {% if by_type %}
+    <div class="card" style="margin-bottom:24px">
+        <h3 style="margin-bottom:12px">Analyses by Type</h3>
+        <table>
+            <thead><tr><th>Type</th><th>Count</th></tr></thead>
+            <tbody>
+            {% for atype, count in by_type | dictsort %}
+            <tr><td>{{ atype }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <p style="margin-top:8px; font-size:13px; color:var(--text-secondary)">
+            Findings: <span class="severity-error">{{ findings.get('errors', 0) }} errors</span>,
+            <span class="severity-warn">{{ findings.get('warnings', 0) }} warnings</span>,
+            <span class="severity-info">{{ findings.get('info', 0) }} info</span>
+        </p>
+    </div>
+    {% endif %}
+
+    {% if prev_snapshot %}
+    {% set p_execs = prev_snapshot.get('executions', {}).get('total', 0) %}
+    {% set p_anal = prev_snapshot.get('analyses', {}).get('total', 0) %}
+    {% set p_completed = prev_snapshot.get('executions', {}).get('completed', 0) %}
+    {% set p_rate = '%.1f' | format(p_completed / p_execs * 100) if p_execs > 0 else '0.0' %}
+    <div class="card">
+        <h3 style="margin-bottom:12px">vs Previous Day ({{ prev_snapshot.date }})</h3>
+        <div style="display:flex; gap:24px; flex-wrap:wrap">
+            <div>
+                <span style="font-weight:600">Executions:</span>
+                {{ total_e }}
+                <span class="trend-{{ 'up' if total_e > p_execs else ('down' if total_e < p_execs else 'flat') }}">
+                    ({{ '%+d' | format(total_e - p_execs) }})
+                </span>
+            </div>
+            <div>
+                <span style="font-weight:600">Analyses:</span>
+                {{ analyses.get('total', 0) }}
+                <span class="trend-{{ 'up' if analyses.get('total', 0) > p_anal else ('down' if analyses.get('total', 0) < p_anal else 'flat') }}">
+                    ({{ '%+d' | format(analyses.get('total', 0) - p_anal) }})
+                </span>
+            </div>
+            <div>
+                <span style="font-weight:600">Pass Rate:</span>
+                {{ prate }}%
+                <span class="trend-{{ 'up' if prate | float > p_rate | float else ('down' if prate | float < p_rate | float else 'flat') }}">
+                    ({{ '%+.1f%%' | format(prate | float - p_rate | float) }})
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:24px; display:flex; gap:8px">
+        <a href="/history" class="btn">&larr; Back to History</a>
+        <form method="POST" action="/reports/generate" style="display:inline">
+            <input type="hidden" name="type" value="daily">
+            <button type="submit" class="btn btn-primary">&#x1f4c4; Generate Daily Report</button>
+        </form>
+    </div>
+</div>
+"""
+
+REPORTS_TEMPLATE = """
+<div class="container">
+    <h2 style="margin-bottom:24px">&#x1f4ca; Reports</h2>
+
+    <div class="action-row">
+        <form method="POST" action="/reports/generate" style="display:inline">
+            <input type="hidden" name="type" value="daily">
+            <button type="submit" class="btn btn-primary">&#x1f4c4; Generate Daily Report</button>
+        </form>
+        <form method="POST" action="/reports/generate" style="display:inline">
+            <input type="hidden" name="type" value="weekly">
+            <button type="submit" class="btn">&#x1f4ca; Generate Weekly Report</button>
+        </form>
+    </div>
+
+    {% if reports %}
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>Type</th><th>Filename</th><th>Size</th><th>Created</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for r in reports %}
+                <tr>
+                    <td>
+                        {% if r.type == 'weekly' %}<span class="badge badge-accent">Weekly</span>
+                        {% else %}<span class="badge badge-active">Daily</span>{% endif %}
+                    </td>
+                    <td style="font-family:monospace; font-size:13px">{{ r.filename }}</td>
+                    <td style="font-size:13px; color:var(--text-secondary)">{{ '%.1f' | format(r.size / 1024) }} KB</td>
+                    <td style="font-size:13px">{{ r.created_at[:16] if r.created_at else '-' }}</td>
+                    <td style="text-align:right">
+                        <a href="/reports/{{ r.filename }}" class="btn btn-sm">View</a>
+                        <a href="/reports/{{ r.filename }}?export=md" class="btn btn-sm">&#x1f4e5;</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center; padding:48px">
+        <p style="color:var(--text-secondary); margin-bottom:16px">No reports generated yet.</p>
+        <p style="color:var(--text-secondary)">Take a snapshot first (History page), then generate a report.</p>
+    </div>
+    {% endif %}
+</div>
+"""
+
+REPORT_VIEW_TEMPLATE = """
+<div class="container" style="max-width:1000px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
+        <h2>&#x1f4c4; {{ filename }}</h2>
+        <a href="/reports/{{ filename }}?export=md" class="btn btn-sm">&#x1f4e5; Download .md</a>
+    </div>
+
+    <div class="report-viewer">{{ content }}</div>
+
+    <div style="margin-top:24px">
+        <a href="/reports" class="btn">&larr; Back to Reports</a>
+    </div>
+</div>
+"""
+
+
+@app.route('/history')
+@login_required
+def history_page():
+    snapshots = list_snapshots(30)
+    trends = compute_trends(7)
+    return _render(HISTORY_TEMPLATE,
+                   title='History',
+                   active_page='history',
+                   snapshots=snapshots,
+                   trends=trends)
+
+
+@app.route('/history/<date_str>')
+@login_required
+def history_detail(date_str):
+    snapshot = get_snapshot(date_str)
+    if not snapshot:
+        flash('Snapshot not found', 'warning')
+        return redirect(url_for('history_page'))
+    if request.args.get('export') == 'md':
+        result = generate_daily(date_str, session.get('user', 'system'))
+        if result:
+            content = get_report(result['filename'])
+            return Response(content, mimetype='text/markdown',
+                            headers={'Content-Disposition':
+                                     f'attachment; filename={result["filename"]}'})
+    prev_date = (date.fromisoformat(date_str) - timedelta(days=1)).isoformat()
+    prev_snapshot = get_snapshot(prev_date)
+    return _render(HISTORY_DETAIL_TEMPLATE,
+                   title=f'Report: {date_str}',
+                   active_page='history',
+                   snapshot=snapshot,
+                   prev_snapshot=prev_snapshot,
+                   date_str=date_str)
+
+
+@app.route('/reports')
+@login_required
+def reports_page():
+    reports = list_reports(50)
+    return _render(REPORTS_TEMPLATE,
+                   title='Reports',
+                   active_page='history',
+                   reports=reports)
+
+
+@app.route('/reports/generate', methods=['POST'])
+@login_required
+def reports_generate():
+    rtype = request.form.get('type', 'daily')
+    user = session.get('user', 'system')
+    if rtype == 'weekly':
+        result = generate_weekly(user=user)
+        if result:
+            flash(f'Weekly report generated: {result["filename"]}', 'success')
+        else:
+            flash('No snapshots available for this week', 'warning')
+    else:
+        today_str = date.today().isoformat()
+        snap = get_snapshot(today_str)
+        if not snap:
+            snapshot_today(user)
+        result = generate_daily(today_str, user)
+        if result:
+            flash(f'Daily report generated: {result["filename"]}', 'success')
+        else:
+            flash('Failed to generate daily report', 'warning')
+    return redirect(url_for('reports_page'))
+
+
+@app.route('/reports/<filename>')
+@login_required
+def report_view(filename):
+    content = get_report(filename)
+    if not content:
+        flash('Report not found', 'warning')
+        return redirect(url_for('reports_page'))
+    if request.args.get('export') == 'md':
+        return Response(content, mimetype='text/markdown',
+                        headers={'Content-Disposition':
+                                 f'attachment; filename={filename}'})
+    return _render(REPORT_VIEW_TEMPLATE,
+                   title=filename,
+                   active_page='history',
+                   filename=filename,
+                   content=content)
+
+
+@app.route('/api/history')
+@login_required
+def api_history():
+    return jsonify(list_snapshots(30))
+
+
+@app.route('/api/history/<date_str>')
+@login_required
+def api_history_detail(date_str):
+    snap = get_snapshot(date_str)
+    if not snap:
+        return jsonify({'error': 'not found'}), 404
+    return jsonify(snap)
+
+
+@app.route('/api/history/snapshot', methods=['POST'])
+@login_required
+def api_snapshot():
+    user = session.get('user', 'system')
+    snap = snapshot_today(user)
+    flash('Snapshot captured', 'success')
+    return redirect(url_for('history_page'))
+
+
+@app.route('/api/history/seed-demo', methods=['POST'])
+@login_required
+def api_seed_demo_history():
+    user = session.get('user', 'system')
+    seeded = seed_demo_history(user)
+    flash(f'Seeded {len(seeded)} days of demo history', 'success')
+    return redirect(url_for('history_page'))
+
+
+@app.route('/api/reports')
+@login_required
+def api_reports():
+    return jsonify(list_reports(50))
 
 
 # --- Analysis pages (Phase 5) ---------------------------------------------

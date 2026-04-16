@@ -43,3 +43,5 @@ INTEGRATION_CACHE_TTL = int(os.environ.get(
     'K8S_AGENT_TOOLS_CACHE_TTL', '600'))
 
 ANALYSES_DIR = DATA_ROOT / 'analyses'
+HISTORY_DIR = DATA_ROOT / 'history'
+REPORTS_DIR = DATA_ROOT / 'reports'
