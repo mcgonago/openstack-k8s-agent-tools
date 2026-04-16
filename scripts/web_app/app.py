@@ -836,7 +836,7 @@ BASE_TEMPLATE = """<!DOCTYPE html>
 {% endwith %}
 {{ content | safe }}
 <footer class="site-footer">
-    OpenStack K8s Agent Tools Server &mdash; Phase 6 &mdash; {{ now }}
+    OpenStack K8s Agent Tools Server &mdash; Phase 7 &mdash; {{ now }}
 </footer>
 </body>
 </html>"""
@@ -3398,7 +3398,7 @@ def operator_health(operator_name):
 # --- API endpoints -------------------------------------------------------
 @app.route('/api/health')
 def api_health():
-    return jsonify({'status': 'ok', 'phase': 4,
+    return jsonify({'status': 'ok', 'phase': 7,
                     'server': 'k8s-agent-tools',
                     'timestamp': datetime.now().isoformat()})
 

@@ -1,0 +1,24 @@
+[Unit]
+Description=K8s Agent Tools Server
+After=network.target
+
+[Service]
+Type=simple
+User=ospng
+Group=ospng
+WorkingDirectory=/home/ospng/k8s-agent-tools-server/app
+Environment=K8S_AGENT_TOOLS_DATA_ROOT=/home/ospng/k8s-agent-tools-server/data
+Environment=K8S_AGENT_TOOLS_PLUGIN_PATH=/home/ospng/k8s-agent-tools-server/plugin
+Environment=K8S_AGENT_TOOLS_PORT=5005
+ExecStart=/home/ospng/k8s-agent-tools-server/venv/bin/gunicorn \
+    --bind 127.0.0.1:5005 \
+    --workers 2 \
+    --timeout 120 \
+    --access-logfile /home/ospng/k8s-agent-tools-server/access.log \
+    --error-logfile /home/ospng/k8s-agent-tools-server/error.log \
+    'web_app.app:app'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

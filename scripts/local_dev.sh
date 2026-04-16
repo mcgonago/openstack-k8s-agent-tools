@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_DIR="${SCRIPT_DIR}/.venv"
 
-echo "=== K8s Agent Tools Server — Phase 1 ==="
+echo "=== K8s Agent Tools Server — Phase 7 ==="
 echo ""
 
 # Create venv if missing
