@@ -10,6 +10,7 @@ WorkingDirectory=/home/ospng/k8s-agent-tools-server/app
 Environment=K8S_AGENT_TOOLS_DATA_ROOT=/home/ospng/k8s-agent-tools-server/data
 Environment=K8S_AGENT_TOOLS_PLUGIN_PATH=/home/ospng/k8s-agent-tools-server/plugin
 Environment=K8S_AGENT_TOOLS_PORT=5006
+Environment=K8S_AGENT_TOOLS_SECRET=k8s-agent-tools-demo-session-key-2026
 ExecStart=/home/ospng/k8s-agent-tools-server/venv/bin/gunicorn \
     --bind 127.0.0.1:5006 \
     --workers 2 \

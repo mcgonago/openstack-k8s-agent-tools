@@ -53,6 +53,7 @@ from .report_generator import (generate_daily, generate_weekly,
 app = Flask(__name__)
 app.secret_key = os.environ.get('K8S_AGENT_TOOLS_SECRET',
                                 secrets.token_hex(32))
+app.permanent_session_lifetime = timedelta(days=7)
 
 # ---------------------------------------------------------------------------
 # CSS theme — dark with orange/amber accent
@@ -1199,6 +1200,7 @@ def register():
         profile = {'display_name': username, 'operator_repos': []}
         with open(user_dir / 'profile.yaml', 'w') as f:
             yaml.dump(profile, f, default_flow_style=False)
+        session.permanent = True
         session['user'] = username
         session['role'] = 'user'
         flash('Account created! Welcome.', 'success')
@@ -1242,6 +1244,7 @@ def login():
         if not user or not check_password_hash(user['password_hash'], password):
             flash('Invalid credentials.', 'error')
             return redirect(url_for('login'))
+        session.permanent = True
         session['user'] = username
         session['role'] = user.get('role', 'user')
         flash(f'Welcome back, {username}!', 'success')
@@ -2287,9 +2290,11 @@ def execute_page():
                    demo_paths=demo_paths)
 
 
-@app.route('/execute/<skill>', methods=['POST'])
+@app.route('/execute/<skill>', methods=['GET', 'POST'])
 @login_required
 def execute_skill(skill):
+    if request.method == 'GET':
+        return redirect(url_for('execute_page'))
     target = request.form.get('target_path', '').strip()
     if not target:
         flash('Target path is required', 'danger')
